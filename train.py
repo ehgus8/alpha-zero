@@ -4,7 +4,7 @@ from replay_buffer import ReplayBuffer
 import test
 import time
 
-def self_play(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcst_iter: int, display=False):
+def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_iter: int, display=False):
     """
     Generate self-play data using MCTS.
     Arge:
@@ -17,7 +17,7 @@ def self_play(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcst_iter
         for iter in range(iterations):
             game = Game()
             start_time = time.time()
-            boards, policy_distributions, winner = game.self_play(model, mcst_iter, display)
+            boards, policy_distributions, winner = game.self_play(model, mcts_iter, display)
             total_time += (time.time() - start_time)
             if winner == -1: # draw
                 reward = 0
@@ -29,7 +29,7 @@ def self_play(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcst_iter
                 buffer.add(boards[i], policy_distributions[i], [reward] if boards[i][2,0,0] == winner else [-reward])
             if (iter+1) % 20 == 0:
                 print("iter:",iter+1,"Player", winner, "wins!", 'game_results:', game_results)
-    Game.logger.debug(f'self_play iter:{iterations} total time: {total_time}s average time per game: {total_time/iterations}s\n' +
+    Game.logger.debug(f'collect_data iter:{iterations} total time: {total_time}s average time per game: {total_time/iterations}s\n' +
                       f'game results: {game_results}')
 
 def train(model: Net, batch_size: int, buffer: ReplayBuffer, train_iterations, device):

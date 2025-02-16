@@ -231,9 +231,9 @@ class Connect4(Game):
             root = Node(None, None, current_player, move_count)
             
             if current_player == 0:
-                Connect4.mcts(self.board, root, model1, model1_mcts_iter)
+                Connect4.mcts(model1, self.board, root, model1_mcts_iter)
             else:
-                Connect4.mcts(self.board, root, model2, model2_mcts_iter)
+                Connect4.mcts(model2, self.board, root, model2_mcts_iter)
 
             if sampling:
                 chosen_child = root.sample_child(Connect4)

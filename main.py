@@ -11,16 +11,16 @@ import torch
 def start_train_loop(older_model, newer_model, buffer, self_play_iterations, train_iterations=1000, batch_size=32, display=False):
     buffers_dir = os.path.join(os.path.dirname(__file__), 'replay_buffers')
     update_count = 0
-    mcst_iter = 50
+    mcts_iter = 50
     for i in range(1, 1001):
         print()
         print('iteration:', i)
         print('update_count:', update_count)
 
-        train.self_play(Connect4, older_model, buffer, iterations=self_play_iterations, mcst_iter=mcst_iter, display=display)
+        train.collect_data(Connect4, older_model, buffer, iterations=self_play_iterations, mcts_iter=mcts_iter, display=display)
         train.train(newer_model, batch_size, buffer=buffer, train_iterations=train_iterations, device='cpu')
         newer_model.to('cpu')
-        newer_model_win_rate = test.compare(Connect4,older_model, newer_model, mcst_iter, mcst_iter, iterations=60, sampling=True)
+        newer_model_win_rate = test.compare(Connect4,older_model, newer_model, mcts_iter, mcts_iter, iterations=60, sampling=True)
         # newer_model_win_rate = test.compare(None, newer_model, min(mcst_iter*(update_count + 1), 800), mcst_iter, iterations=60, sampling=False)
         if newer_model_win_rate > 0.55:
             older_model.load_state_dict(newer_model.state_dict())
@@ -35,8 +35,8 @@ def start_train_loop(older_model, newer_model, buffer, self_play_iterations, tra
             os.makedirs(buffers_dir, exist_ok=True)
             buffer.save_pickle(os.path.join(buffers_dir, f'replay_buffer_v{update_count}_i_{i}.pkl'))
             # model compare with vanilla mcts
-            print(f'vanila mcts (iter: {min(mcst_iter*update_count, 800)}) vs newer model result:')
-            test.compare(Connect4, None, newer_model, min(mcst_iter*update_count, 800), mcst_iter, iterations=60, sampling=False)
+            print(f'vanila mcts (iter: {min(mcts_iter*update_count, 800)}) vs newer model result:')
+            test.compare(Connect4, None, newer_model, min(mcts_iter*update_count, 800), mcts_iter, iterations=60, sampling=False)
 
             
         else:
