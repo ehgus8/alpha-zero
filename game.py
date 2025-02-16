@@ -37,10 +37,6 @@ class Game(ABC):
     def check_winner(board: np.array, player, action):
         pass
 
-    @abstractmethod
-    def play_against_mcts(self, mcts_iterations):
-        pass
-
 
 
         

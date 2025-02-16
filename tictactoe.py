@@ -91,51 +91,11 @@ class TicTacToe(Game):
         """
         MCTS.mcts(model, board, root, TicTacToe, mcts_iterations)
 
-    def play_against_mcts(self, mcts_iterations):
-        """
-        Play a game of Tic-Tac-Toe against the MCTS agent.
-
-        """
-        current_player = 0
-        move_count = 0
-
-        while True:
-            # Human player
-            TicTacToe.display_board(self.board)
-            row, col = map(int, input("Enter row and column: ").split())
-            current_player = TicTacToe.make_move(self.board, current_player, (row, col))
-            move_count += 1
-            winner = TicTacToe.check_winner(self.board, 1 - current_player, (row, col))
-            if winner != -1:
-                TicTacToe.display_board(self.board)
-                print("Player", winner, "wins!")
-                break
-            elif move_count == 9:
-                TicTacToe.display_board(self.board)
-                print("It's a draw!")
-                break
-
-            # MCTS agent
-            root = Node(None, None, current_player, move_count)
-            print('move_count_root:',move_count)
-            start_time = time.time()
-            TicTacToe.mcts(self.board, root, mcts_iterations)
-            TicTacToe.logger.debug(f'mcts_iteration: {mcts_iterations}, time: {time.time() - start_time}s')
-            # row, col = root.sample_child().prevAction
-            chosen_child = root.max_visit_child()
-            for child in root.children:
-                print(child.to_string(TicTacToe))
-            current_player = TicTacToe.make_move(self.board, current_player, chosen_child.prevAction)
-            move_count += 1
-            winner = TicTacToe.check_winner(self.board, root.currentPlayer, chosen_child.prevAction)
-            if winner != -1:
-                TicTacToe.display_board(self.board)
-                print("Player", winner, "wins!")
-                break
-            elif move_count == 9:
-                TicTacToe.display_board(self.board)
-                print("It's a draw!")
-                break
+    def get_input(board):
+        row, col = map(int, input("Enter row and column: ").split())
+        if board[0, row, col] == 1 or board[1, row, col] == 1:
+            return None
+        return (row, col)
 
     def self_play(self, model, mcts_iter, display = False):
 

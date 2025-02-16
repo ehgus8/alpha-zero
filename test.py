@@ -3,6 +3,56 @@ from nn import Net
 from utils import load_model
 import torch
 from node import Node
+import time
+
+
+def play_against_agent(Game, model, mcts_iterations, human_turn):
+        current_player = 0
+        move_count = 0
+        game = Game()
+        while True:
+            Game.display_board(game.board)
+
+            if current_player == human_turn:
+                action = Game.get_input(game.board)
+                if action is None:
+                    print("Invalid move. Try again.")
+                    continue
+
+                current_player = Game.make_move(game.board, current_player, action)
+                move_count += 1
+
+                winner = Game.check_winner(game.board, 1 - current_player, action)
+                if winner != -1:
+                    Game.display_board(game.board)
+                    print("Player", winner, "wins!")
+                    break
+                elif move_count == Game.state_dim:
+                    Game.display_board(game.board)
+                    print("It's a draw!")
+                    break
+            else:
+                root = Node(None, None, current_player, move_count)
+                start_time = time.time()
+                Game.mcts(model, game.board, root, mcts_iterations) 
+                model_name = 'network' if model else 'vanilla'
+                Game.logger.debug(f'model: {model_name} mcts_iteration: {mcts_iterations}, time: {time.time() - start_time}s')
+                chosen_child = root.max_visit_child() 
+                for child in root.children:
+                    print(child.to_string(Game))
+                current_player = Game.make_move(game.board, current_player, chosen_child.prevAction)
+                move_count += 1
+
+                winner = Game.check_winner(game.board, root.currentPlayer, chosen_child.prevAction)
+                if winner != -1:
+                    Game.display_board(game.board)
+                    print("Player", winner, "wins!")
+                    break
+                elif move_count == Game.state_dim:
+                    Game.display_board(game.board)
+                    print("It's a draw!")
+                    break
+
 def compete(Game, model1, model2, model1_mcts_iter = 50, model2_mcts_iter = 50, sampling = False, display = False):
         """
         Play a game between two agents.

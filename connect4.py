@@ -24,7 +24,6 @@ class Connect4(Game):
         for i, row in enumerate(display):
             print(i, ' '.join(row))
         print()
-        # print(board[2])
 
     @staticmethod
     def get_action_idx(move: tuple[int, int]):
@@ -40,14 +39,10 @@ class Connect4(Game):
         for row in range(5, -1, -1):
             if board[0, row, col] == 0 and board[1, row, col] == 0:
                 return row
-        return None  # 만약 col이 가득 차 있다면 None
+        return None  
     
     @staticmethod
     def get_valid_moves(board):
-        """
-        현재 board에서 둘 수 있는 모든 열(column) 리스트를 반환
-        (가득 차지 않은 열만 valid)
-        """
         valid_moves = []
         for col in range(Connect4.action_dim):
             # top row가 비어있으면(col, row=0)이 아니라, bottom부터 확인
@@ -96,7 +91,7 @@ class Connect4(Game):
                     return True
                 
             return False
-        # 방향 벡터
+        # direction vector
         directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
         for dr, dc in directions:
             if dfs(dr, dc):
@@ -112,58 +107,15 @@ class Connect4(Game):
         """
         MCTS.mcts(model, board, root, Connect4, mcts_iterations)
 
-    def play_against_mcts(self, model, mcts_iterations):
-        """
-        사람 vs MCTS
-        """
-        current_player = 0
-        move_count = 0
+    @staticmethod
+    def get_input(board):
+        col = int(input("Enter column (0~6): "))
+        row = Connect4.get_drop_row(board, col)
+        if row is None:
+            return None
+        return (row, col)
 
-        while True:
-            # 1) Human turn
-            Connect4.display_board(self.board)
-            col = int(input("Enter column (0~6): "))
-            row = Connect4.get_drop_row(self.board, col)
-            if row is None:
-                print("Invalid move. Try again.")
-                continue
-
-            current_player = Connect4.make_move(self.board, current_player, (row, col))
-            move_count += 1
-
-            winner = Connect4.check_winner(self.board, 1 - current_player, (row, col))
-            if winner != -1:
-                Connect4.display_board(self.board)
-                print("Player", winner, "wins!")
-                break
-            elif move_count == 42:
-                Connect4.display_board(self.board)
-                print("It's a draw!")
-                break
-
-            # 2) MCTS agent turn
-            root = Node(None, None, current_player, move_count)
-            start_time = time.time()
-            Connect4.mcts(model, self.board, root, mcts_iterations)  # model이 None이면 vanilla MCTS
-            model_name = 'network' if model else 'vanilla'
-            Connect4.logger.debug(f'model: {model_name} mcts_iteration: {mcts_iterations}, time: {time.time() - start_time}s')
-            chosen_child = root.max_visit_child() 
-            for child in root.children:
-                print(child.to_string(Connect4))
-            current_player = Connect4.make_move(self.board, current_player, chosen_child.prevAction)
-            move_count += 1
-
-            winner = Connect4.check_winner(self.board, root.currentPlayer, chosen_child.prevAction)
-            if winner != -1:
-                Connect4.display_board(self.board)
-                print("Player", winner, "wins!")
-                break
-            elif move_count == 42:
-                Connect4.display_board(self.board)
-                print("It's a draw!")
-                break
-
-    def self_play(self, model, mcts_iter = 50, display = False):
+    def self_play(self, model, mcts_iter, display = False):
 
         current_player = 0
         move_count = 0
@@ -190,7 +142,6 @@ class Connect4(Game):
                 if display:
                     Connect4.display_board(self.board)
                     print('time:',time.time() - start_time,'s')
-                # Connect4.logger.debug(f'self_play, time: {time.time() - start_time}s')
                 break
             elif move_count == 42:
                 if display:

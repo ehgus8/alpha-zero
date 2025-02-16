@@ -48,20 +48,26 @@ def start_train_loop(Game, older_model, newer_model,
         if i % 20 == 0:
             buffer.save_pickle(os.path.join(buffers_dir, f'replay_buffer_v{update_count}_i_{i}_regular.pkl'))
 
+def select_game():
+    print('1. TicTacToe')
+    print('2. Connect4')
+    game_num = int(input())
+    if game_num == 1:
+        Game = TicTacToe
+    elif game_num == 2:
+        Game = Connect4
+    return Game
+
 if __name__ == "__main__":
     while True:
         print('select the mode')
         print('1. train')
         print('2. test')
+        print('3. play against agent')
         mode = int(input())
         if mode == 1:
-            print('1. TicTacToe')
-            print('2. Connect4')
-            game_num = int(input())
-            if game_num == 1:
-                Game = TicTacToe
-            elif game_num == 2:
-                Game = Connect4
+            
+            Game = select_game()
             """
             Call start train loop
             """
@@ -85,5 +91,13 @@ if __name__ == "__main__":
             best_model_mcts_iter = 600
             contender_model_mcts_iter = 25
             test.compare(None, model, best_model_mcts_iter, contender_model_mcts_iter, 100, sampling=False)
+        elif mode == 3:
+            """
+            Play against agent
+            """
+            Game = select_game()
+            print('select turn first(0) second(1):')
+            human_turn = int(input())
+            test.play_against_agent(Game, None, 500, human_turn)
         else:
             print('wrong mode')
