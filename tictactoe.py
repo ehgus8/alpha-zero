@@ -15,7 +15,7 @@ class TicTacToe(Game):
     logger = utils.get_game_logger('tictactoe')
 
     def __init__(self):
-        self.board = np.zeros((3, 3, 3), dtype=int)
+        self.board = np.zeros((3, 3, 3), dtype=np.float32)
 
     @staticmethod
     def display_board(board):
@@ -62,10 +62,10 @@ class TicTacToe(Game):
                 r, c = q.pop()
                 visited.add((r, c))
                 
-                if 0 <= r + dr < 3 and 0 <= c + dc < 3 and (r + dr, c + dc) not in visited and board[player, r + dr, c + dc] == 1:
+                if 0 <= r + dr < TicTacToe.rows and 0 <= c + dc < TicTacToe.cols and (r + dr, c + dc) not in visited and board[player, r + dr, c + dc] == 1:
                     q.append((r + dr, c + dc))
                     seq_count += 1
-                if 0 <= r - dr < 3 and 0 <= c - dc < 3 and (r - dr, c - dc) not in visited and board[player, r - dr, c - dc] == 1:
+                if 0 <= r - dr < TicTacToe.rows and 0 <= c - dc < TicTacToe.cols and (r - dr, c - dc) not in visited and board[player, r - dr, c - dc] == 1:
                     q.append((r - dr, c - dc))
                     seq_count += 1
                 if seq_count >= 3:
@@ -84,12 +84,12 @@ class TicTacToe(Game):
         return [(r, c) for r in range(3) for c in range(3) if board[0, r, c] == 0 and board[1, r, c] == 0]
 
     @staticmethod
-    def mcts(board: np.array, root, mcts_iterations):
+    def mcts(model, board: np.array, root, mcts_iterations):
         """
         Call Monte Carlo Tree Search.
         Select -> Expand -> Simulate -> Backup
         """
-        MCTS.mcts(board, root, TicTacToe, mcts_iterations)
+        MCTS.mcts(model, board, root, TicTacToe, mcts_iterations)
 
     def play_against_mcts(self, mcts_iterations):
         """
@@ -136,3 +136,39 @@ class TicTacToe(Game):
                 TicTacToe.display_board(self.board)
                 print("It's a draw!")
                 break
+
+    def self_play(self, model, mcts_iter, display = False):
+
+        current_player = 0
+        move_count = 0
+        boards = []
+        policy_distributions = []
+        start_time = time.time()
+        while True:
+            root = Node(None, None, current_player, move_count)
+
+            TicTacToe.mcts(model, self.board, root, mcts_iter)
+
+            policy_distribution = utils.get_probablity_distribution_of_children(root, TicTacToe)
+            policy_distributions.append(policy_distribution)
+            boards.append(self.board.copy())
+
+            chosen_child = root.sample_child(TicTacToe) if model else root.max_visit_child()
+            
+
+            current_player = TicTacToe.make_move(self.board, current_player, chosen_child.prevAction)
+            move_count += 1
+
+            winner = TicTacToe.check_winner(self.board, root.currentPlayer, chosen_child.prevAction)
+            if winner != -1:
+                if display:
+                    TicTacToe.display_board(self.board)
+                    print('time:',time.time() - start_time,'s')
+                break
+            elif move_count == TicTacToe.state_dim:
+                if display:
+                    TicTacToe.display_board(self.board)
+                winner = -1
+                break
+
+        return boards, policy_distributions, winner

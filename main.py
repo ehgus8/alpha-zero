@@ -8,19 +8,20 @@ import test
 import utils
 import torch
 
-def start_train_loop(older_model, newer_model, buffer, self_play_iterations, train_iterations=1000, batch_size=32, display=False):
+def start_train_loop(Game, older_model, newer_model, 
+                     buffer, self_play_iterations, train_iterations, batch_size, display=False):
     buffers_dir = os.path.join(os.path.dirname(__file__), 'replay_buffers')
     update_count = 0
-    mcts_iter = 50
+    mcts_iter = 25
     for i in range(1, 1001):
         print()
         print('iteration:', i)
         print('update_count:', update_count)
 
-        train.collect_data(Connect4, older_model, buffer, iterations=self_play_iterations, mcts_iter=mcts_iter, display=display)
+        train.collect_data(Game, older_model, buffer, iterations=self_play_iterations, mcts_iter=mcts_iter, display=display)
         train.train(newer_model, batch_size, buffer=buffer, train_iterations=train_iterations, device='cpu')
         newer_model.to('cpu')
-        newer_model_win_rate = test.compare(Connect4,older_model, newer_model, mcts_iter, mcts_iter, iterations=60, sampling=True)
+        newer_model_win_rate = test.compare(Game,older_model, newer_model, mcts_iter, mcts_iter, iterations=60, sampling=True)
         # newer_model_win_rate = test.compare(None, newer_model, min(mcst_iter*(update_count + 1), 800), mcst_iter, iterations=60, sampling=False)
         if newer_model_win_rate > 0.55:
             older_model.load_state_dict(newer_model.state_dict())
@@ -31,9 +32,11 @@ def start_train_loop(older_model, newer_model, buffer, self_play_iterations, tra
             models_dir = os.path.join(os.path.dirname(__file__), 'models')
             os.makedirs(models_dir, exist_ok=True)
             torch.save(newer_model.state_dict(), os.path.join(models_dir, f'model_v{update_count}.pth'))
+
             # buffer save
             os.makedirs(buffers_dir, exist_ok=True)
             buffer.save_pickle(os.path.join(buffers_dir, f'replay_buffer_v{update_count}_i_{i}.pkl'))
+            
             # model compare with vanilla mcts
             print(f'vanila mcts (iter: {min(mcts_iter*update_count, 800)}) vs newer model result:')
             test.compare(Connect4, None, newer_model, min(mcts_iter*update_count, 800), mcts_iter, iterations=60, sampling=False)
@@ -69,8 +72,8 @@ if __name__ == "__main__":
             print(older_model)
             newer_model.load_state_dict(older_model.state_dict())
 
-            start_train_loop(older_model, newer_model, buffer, 
-                             self_play_iterations=100, batch_size=256, train_iterations=500, 
+            start_train_loop(Game, older_model, newer_model, buffer, 
+                             self_play_iterations=50, batch_size=256, train_iterations=50, 
                              display=True)
         elif mode == 2:
             """

@@ -164,32 +164,21 @@ class Connect4(Game):
                 break
 
     def self_play(self, model, mcts_iter = 50, display = False):
-        """
-        MCTS 또는 MCTS+네트워크(AlphaZero식)로 자기 대국 수행
-        Returns:
-            boards: 매 스텝의 board 상태 기록(list)
-            policy_distributions: 매 스텝 root의 자식 방문횟수 기반 확률분포(list)
-            winner: 최종 승자(0 or 1), -1은 무승부
-        """
+
         current_player = 0
         move_count = 0
         boards = []
         policy_distributions = []
         start_time = time.time()
         while True:
-            # if display:
-                # Connect4.display_board(self.board)
             root = Node(None, None, current_player, move_count)
-            # MCTS 진행
+
             Connect4.mcts(model, self.board, root, mcts_iter)
-            # 자식 방문 횟수(또는 policy)에 따른 분포
+
             policy_distribution = utils.get_probablity_distribution_of_children(root, Connect4)
             policy_distributions.append(policy_distribution)
             boards.append(self.board.copy())
 
-            # 액션 선택 (샘플링 또는 max visit)
-            # 여기서는 sample_child()를 예시로
-            # (model이 None이면 max_visit_child()로 두어도 됨)
             chosen_child = root.sample_child(Connect4) if model else root.max_visit_child()
             
 
@@ -210,47 +199,3 @@ class Connect4(Game):
                 break
 
         return boards, policy_distributions, winner
-    
-    def compete(self, model1, model2, model1_mcts_iter = 50, model2_mcts_iter = 50, sampling = False, display = False):
-        """
-        Play a game between two agents.
-
-        Args:
-            sampling (bool): Whether to sample the child nodes or select the child node with the maximum visit count.
-        Returns: (winner, final_board)
-            winner = 0 or 1, -1(무승부)
-        """
-        current_player = 0
-        move_count = 0
-
-        while True:
-            if display:
-                Connect4.display_board(self.board)
-                print()
-
-            root = Node(None, None, current_player, move_count)
-            
-            if current_player == 0:
-                Connect4.mcts(model1, self.board, root, model1_mcts_iter)
-            else:
-                Connect4.mcts(model2, self.board, root, model2_mcts_iter)
-
-            if sampling:
-                chosen_child = root.sample_child(Connect4)
-            else:
-                chosen_child = root.max_visit_child()
-
-            current_player = Connect4.make_move(self.board, current_player, chosen_child.prevAction)
-            move_count += 1
-
-            winner = Connect4.check_winner(self.board, root.currentPlayer, chosen_child.prevAction)
-            if winner != -1:
-                if display:
-                    Connect4.display_board(self.board)
-                    print("Player", winner, "wins!")
-                return winner, self.board
-            elif move_count == 42:
-                if display:
-                    Connect4.display_board(self.board)
-                    print("It's a draw!")
-                return -1, self.board
