@@ -24,14 +24,13 @@ class Node:
         self.currentPlayer = currentPlayer
         self.children = []
 
-    def select(self):
+    def select(self, mode):
         """
         Select the child node with the highest UCB value.
-        But Actually, this function sorts the children by UCB value in ascending order.
         """
-
-        utils.calcUcbOfChildrenFromParent(self)
-        self.children.sort(key=lambda x: x.ucb, reverse=True)
+        utils.calcUcbOfChildrenFromParent(self, mode)
+        return max(self.children, key=lambda x: x.ucb)
+        # self.children.sort(key=lambda x: x.ucb, reverse=True)
 
     def expand(self, valid_moves: list[tuple[int, int]], policy_distribution, Game):
         """
@@ -58,6 +57,8 @@ class Node:
             value *= -1
             if node.parent:
                 Game.undo_move(board, node.currentPlayer, node.prevAction)
+            else:
+                board[2, :, :] = node.currentPlayer
     
     def max_visit_child(self):
         """

@@ -2,6 +2,8 @@ from collections import deque
 import numpy as np
 import torch
 import pickle
+import os
+
 class ReplayBuffer:
     def __init__(self, buffer_size):
         self.buffer_size = buffer_size
@@ -22,6 +24,10 @@ class ReplayBuffer:
                 torch.tensor(policy_distributions), 
                 torch.tensor(rewards))
     
+    def head(self, size):
+        for i in range(size):
+            print(self.buffer[-i])
+
     def size(self):
         return len(self.buffer)
     
@@ -35,8 +41,9 @@ class ReplayBuffer:
 
 
     def load_pickle(self, filename):
+        buffer_path = os.path.join(os.path.dirname(__file__), f'replay_buffers/{filename}.pkl')
         try:
-            with open(filename, 'rb') as f:
+            with open(buffer_path, 'rb') as f:
                 self.buffer = pickle.load(f)
             print(f"Replay Buffer loaded from {filename} successfully.")
         except:

@@ -1,11 +1,11 @@
 import game
 import numpy as np
 import torch
+import utils
 
 class MCTS:
-
     @staticmethod
-    def mcts(model, board, root, Game: game.Game, mcts_iterations):
+    def mcts(model, board, root, Game: game.Game, mcts_iterations, dirichlet = True):
         """
         Perform Monte Carlo Tree Search.
         Select -> Expand -> Simulate -> Backup
@@ -18,26 +18,21 @@ class MCTS:
         for _ in range(mcts_iterations):
             node = root
             trace = [root]
-            is_terminal = False
             while node.children:
-                node.select()
-                node = node.children[0]
+                node = node.select('network' if model else 'normal')
                 trace.append(node)
 
                 Game.make_move(board, 1 - node.currentPlayer, node.prevAction)
+            if node.prevAction:
                 winner = Game.check_winner(board, 1 - node.currentPlayer, node.prevAction)
                 if winner != -1:
-                    is_terminal = True
                     result = 1 if winner == 1 - node.currentPlayer else -1
                     node.backup(trace, result, board, Game)
-                    break
+                    continue
                 elif node.move_count == Game.state_dim:
-                    is_terminal = True
                     result = 0
                     node.backup(trace, result, board, Game)
-                    break
-            if is_terminal:
-                continue
+                    continue
             valid_moves = Game.get_valid_moves(board)
             if model:
                 # forward
@@ -47,6 +42,8 @@ class MCTS:
                 )
                 policy_logits = policy_logits.squeeze(0).detach().numpy()
                 policy_softmax = np.exp(policy_logits) / np.sum(np.exp(policy_logits))
+                if (not node.prevAction) and dirichlet:
+                    policy_softmax = utils.add_dirichlet_noise(policy_softmax)
                 # Expand
                 node.expand(valid_moves, policy_softmax, Game)
                 result = -value.item()
@@ -63,21 +60,17 @@ class MCTS:
         sim_board = board.copy()
         current_player = node.currentPlayer
         move_count = node.move_count
-
-        while True:
+        winner = -1
+        while winner == -1 and move_count < Game.state_dim:
             valid_moves = Game.get_valid_moves(sim_board)
-            if not valid_moves:
-                print('move_count:',move_count, node.move_count)
-                Game.display_board(board)
-                Game.display_board(sim_board)
-                break
+
             action = valid_moves[np.random.randint(len(valid_moves))]
 
             current_player = Game.make_move(sim_board, current_player, action)
             move_count += 1
 
             winner = Game.check_winner(sim_board, 1 - current_player, action)
-            if winner != -1:
-                return 1 if winner == (1 - node.currentPlayer) else -1
-            elif move_count == Game.state_dim:
-                return 0
+
+        if winner != -1:
+            return 1 if winner == (1 - node.currentPlayer) else -1
+        return 0

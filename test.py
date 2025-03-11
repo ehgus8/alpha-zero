@@ -7,6 +7,8 @@ import time
 
 
 def play_against_agent(Game, model, mcts_iterations, human_turn):
+        if model is not None:
+            model.eval()
         current_player = 0
         move_count = 0
         game = Game()
@@ -78,7 +80,7 @@ def compete(Game, model1, model2, model1_mcts_iter = 50, model2_mcts_iter = 50, 
                 Game.mcts(model2, game.board, root, model2_mcts_iter)
 
             if sampling:
-                chosen_child = root.sample_child(Game)
+                chosen_child = root.sample_child(Game) if move_count < 10 else root.max_visit_child()
             else:
                 chosen_child = root.max_visit_child()
 
@@ -97,7 +99,7 @@ def compete(Game, model1, model2, model1_mcts_iter = 50, model2_mcts_iter = 50, 
                     print("It's a draw!")
                 return -1, game.board
 
-def compare(Game, best_model, contender_model, best_model_mcts_iter: int, contender_model_mcts_iter: int, iterations: int, sampling=True):
+def compare(Game, best_model, contender_model, best_model_mcts_iter: int, contender_model_mcts_iter: int, iterations: int, sampling: bool, early_stopping: bool):
     win_count = [0, 0, 0] # best model's, contender model's, draw
     if best_model is not None:
         best_model.eval()
@@ -105,6 +107,7 @@ def compare(Game, best_model, contender_model, best_model_mcts_iter: int, conten
         contender_model.eval()
     with torch.no_grad():
         for i in range(iterations):
+            start_time = time.time()
             winner, board = compete(Game, best_model if i < iterations//2 else contender_model, 
                                         contender_model if i < iterations//2 else best_model, 
                                         best_model_mcts_iter if i < iterations//2 else contender_model_mcts_iter, 
@@ -118,6 +121,16 @@ def compare(Game, best_model, contender_model, best_model_mcts_iter: int, conten
                 win_count[0] += 0.5
                 win_count[1] += 0.5
                 win_count[2] += 1
+            Game.display_board(board)
+            Game.logger.debug(f'compare iter({i+1}/{iterations}) win count:{win_count}, best model win rate:{win_count[0] / (i+1)}, contender model win rate:{win_count[1] / (i+1)}, draw rate:{win_count[2] / (i+1)}, time:{time.time()-start_time}s')
 
+            if early_stopping:
+                if win_count[1] >= int(iterations*0.55):
+                    Game.logger.debug(f'compare early stopped, model accepted')
+                    return 1
+                remained_iter = iterations - (i+1)
+                if win_count[1] + remained_iter < int(iterations*0.55):
+                    Game.logger.debug(f'compare early stopped, model rejected')
+                    return 0
     print('win count:', win_count, 'best model win rate:', win_count[0] / iterations, 'contender model win rate:', win_count[1] / iterations, 'draw rate:', win_count[2] / iterations)
     return win_count[1] / iterations
