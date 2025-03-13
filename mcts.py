@@ -36,10 +36,14 @@ class MCTS:
             valid_moves = Game.get_valid_moves(board)
             if model:
                 # forward
-                policy_logits, value = model(
-                    torch.from_numpy(board).unsqueeze(0)
-                    # torch.tensor(board, dtype=torch.float32).unsqueeze(0)
-                )
+                if node.currentPlayer == 1: # white
+                    board_for_model = np.empty_like(board)
+                    board_for_model[0], board_for_model[1], board_for_model[2] = board[1], board[0], board[2]
+                    policy_logits, value = model(
+                        torch.from_numpy(board_for_model).unsqueeze(0))
+                else:
+                    policy_logits, value = model(
+                        torch.from_numpy(board).unsqueeze(0))
                 policy_logits = policy_logits.squeeze(0).detach().numpy()
                 policy_softmax = np.exp(policy_logits) / np.sum(np.exp(policy_logits))
                 if (not node.prevAction) and dirichlet:

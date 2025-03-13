@@ -49,6 +49,12 @@ def get_probablity_distribution_of_children(node: 'Node', Game):
     probablity_distribution = visit_counts/np.sum(visit_counts)
     return probablity_distribution
 
+def save_model(model, version: int):
+    # model save
+    models_dir = os.path.join(os.path.dirname(__file__), 'models')
+    os.makedirs(models_dir, exist_ok=True)
+    torch.save(model.state_dict(), os.path.join(models_dir, f'model_v{version}.pth'))
+
 def load_model(model: 'Net', name: str):
     """
     Load the model from the path.

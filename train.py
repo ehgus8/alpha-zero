@@ -3,12 +3,20 @@ from nn import Net
 from replay_buffer import ReplayBuffer
 import test
 import time
+import numpy as np
 
 def save_data_to_buffer(buffer: ReplayBuffer, data):
     boards, policies, qs, winner, reward = data
-    # buffer.add(boards[i], policy_distributions[i], [(reward + qs[i])/2] if boards[i][2,0,0] == winner else [(-reward + qs[i])/2])
     for i in range(len(boards)):
-        buffer.add(boards[i], policies[i], [reward] if boards[i][2,0,0] == winner else [-reward])
+        if boards[i][2,0,0] == 0:
+            # buffer.add(boards[i], policies[i], [reward] if boards[i][2,0,0] == winner else [-reward])
+            buffer.add(boards[i], policies[i], [(reward + qs[i])/2] if boards[i][2,0,0] == winner else [(-reward + qs[i])/2])
+        else:
+            board_for_model = np.empty_like(boards[i])
+            board_for_model[0], board_for_model[1], board_for_model[2] = boards[i][1], boards[i][0], boards[i][2]
+            # buffer.add(board, policies[i], [reward] if boards[i][2,0,0] == winner else [-reward])
+            buffer.add(board_for_model, policies[i], [(reward + qs[i])/2] if boards[i][2,0,0] == winner else [(-reward + qs[i])/2])
+        
 
 
 def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_iter: int, display=False):

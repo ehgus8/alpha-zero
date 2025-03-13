@@ -8,7 +8,7 @@ import utils
 
 
 class Gomoku(Game):
-    rows, cols = 15, 15
+    rows, cols = 7, 7
     action_dim = rows * cols
     state_dim = rows * cols
 
@@ -137,11 +137,6 @@ class Gomoku(Game):
             else:
                 chosen_child = root.max_visit_child()
             
-            # if move_count == 1 or move_count == 2 or move_count == 10 or move_count == 11:
-            #     Gomoku.logger.debug(f'self_play move count:{move_count}')
-            #     for child in root.children:
-            #         # print(child.to_string(Gomoku))
-            #         Gomoku.logger.debug(f'\t{child.to_string(Gomoku)}')
             current_player = Gomoku.make_move(self.board, current_player, chosen_child.prevAction)
             move_count += 1
 
