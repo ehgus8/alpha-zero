@@ -1,9 +1,8 @@
 import numpy as np
 import time
-from game import Game
+from .game import Game
 from collections import deque
-from mcts import MCTS
-from node import Node
+from ai import Node, MCTS
 import utils
 
 

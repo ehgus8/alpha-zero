@@ -1,4 +1,3 @@
-import game
 import numpy as np
 import torch
 import utils
@@ -9,7 +8,7 @@ class MCTS:
     matched = 0
     mcts_count = 0
     @staticmethod
-    def mcts(model, board, root, Game: game.Game, mcts_iterations, dirichlet=True):
+    def mcts(model, board, root, Game, mcts_iterations, dirichlet=True):
         """
         Perform Monte Carlo Tree Search.
         Select -> Expand -> Simulate -> Backup
@@ -71,7 +70,7 @@ class MCTS:
             node.backup(trace, result, board, Game)
 
     @staticmethod
-    def simulate(Game: game.Game, board, node):
+    def simulate(Game, board, node):
         """
         Simulation (rollout) step of MCTS.
         """

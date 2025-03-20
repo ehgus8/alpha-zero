@@ -1,6 +1,5 @@
 import numpy as np
 import utils
-import game
 
 class NodePool:
     def __init__(self, pool_size):
@@ -95,7 +94,7 @@ class Node:
         
         return np.random.choice(children, p=prob_dist)
 
-    def to_string(self, Game: game.Game):
+    def to_string(self, Game):
         prob_dist = utils.get_probablity_distribution_of_children(self.parent, Game)
         return f"Node: {self.prevAction}, Value: {self.value}, Visit: {self.visit}, P(Visit): {prob_dist[Game.get_action_idx(self.prevAction)]}, UCB: {self.ucb}"
     

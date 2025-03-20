@@ -1,15 +1,15 @@
 import os
-from tictactoe import TicTacToe
-from connect4 import Connect4
-from gomoku import Gomoku
-from nn import Net
+from games import TicTacToe
+from games import Connect4
+from games import Gomoku
+from ai.nn import Net
 from replay_buffer import ReplayBuffer
 import train
 import test
 import utils
 import torch
 import logging
-import mcts
+from ai import mcts
 
 # logging.basicConfig()
 

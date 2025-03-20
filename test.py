@@ -1,8 +1,8 @@
 import os
-from nn import Net
+from ai.nn import Net
 from utils import load_model
 import torch
-from node import Node
+from ai import Node
 import time
 
 

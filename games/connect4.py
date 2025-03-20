@@ -1,9 +1,8 @@
 import numpy as np
 from collections import deque
-from node import Node
+from ai import Node, MCTS
 import time
-from game import Game
-from mcts import MCTS
+from .game import Game
 import utils
 class Connect4(Game):
     rows, cols = 6, 7

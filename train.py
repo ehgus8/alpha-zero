@@ -1,5 +1,5 @@
 import torch
-from nn import Net
+from ai.nn import Net
 from replay_buffer import ReplayBuffer
 import test
 import time
