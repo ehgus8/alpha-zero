@@ -47,7 +47,8 @@ class ReplayBuffer:
         buffer_path = os.path.join(os.path.dirname(__file__), f'replay_buffers/{filename}.pkl')
         try:
             with open(buffer_path, 'rb') as f:
-                self.buffer = pickle.load(f)
+                loaded_buffer = pickle.load(f)
+            self.buffer = deque(loaded_buffer, maxlen=self.buffer_size)
             print(f"Replay Buffer loaded from {filename} successfully.")
         except:
             print("Failed to load Replay Buffer.")
