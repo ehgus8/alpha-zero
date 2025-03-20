@@ -2,6 +2,22 @@ import numpy as np
 import utils
 import game
 
+class NodePool:
+    def __init__(self, pool_size):
+        self.pool = [Node() for _ in range(pool_size)]
+    
+    def acquire(self):
+        # 풀에 노드가 있다면 재사용, 없으면 새로 생성
+        if self.pool:
+            return self.pool.pop()
+        else:
+            return Node()
+    
+    def release(self, node):
+        # 노드 초기화 후 풀에 반환
+        node.reset()
+        self.pool.append(node)
+
 class Node:
     def __init__(self, parent: 'Node', prevAction: tuple, currentPlayer: int, move_count: int, prior: float = 0.0):
         """
@@ -58,7 +74,7 @@ class Node:
             if node.parent:
                 Game.undo_move(board, node.currentPlayer, node.prevAction)
             else:
-                board[2, :, :] = node.currentPlayer
+                board[-1, :, :] = node.currentPlayer
     
     def max_visit_child(self):
         """

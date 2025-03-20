@@ -8,14 +8,14 @@ import utils
 
 
 class Gomoku(Game):
-    rows, cols = 7, 7
+    rows, cols = 9, 9
     action_dim = rows * cols
     state_dim = rows * cols
-
+    feature_dim = 3
     logger = utils.get_game_logger('Gomoku')
 
     def __init__(self):
-        self.board = np.zeros((3, Gomoku.rows, Gomoku.cols), dtype=np.float32)
+        self.board = np.zeros((Gomoku.feature_dim, Gomoku.rows, Gomoku.cols), dtype=np.float32)
 
     @staticmethod
     def display_board(board):
@@ -44,7 +44,7 @@ class Gomoku(Game):
         row, col = action
         if board[0, row, col] == 0 and board[1, row, col] == 0:
             board[current_player, row, col] = 1
-            board[2, :, :] = 1 - current_player
+            board[-1, :, :] = 1 - current_player
             return 1 - current_player
         else:
             print("Invalid move. Try again.")
@@ -119,9 +119,11 @@ class Gomoku(Game):
         current_player = 0
         move_count = 0
         boards = []
+        actions = [(-1, -1)]
         policy_distributions = []
         qs = []
         start_time = time.time()
+        # prev_action = None
         while True:
             root = Node(None, None, current_player, move_count)
 
@@ -133,13 +135,14 @@ class Gomoku(Game):
             qs.append(root.value / root.visit)
 
             if model:
-                chosen_child = root.sample_child(Gomoku) if move_count < 10 else root.max_visit_child()
+                chosen_child = root.sample_child(Gomoku) if move_count < 60 else root.max_visit_child()
             else:
                 chosen_child = root.max_visit_child()
             
             current_player = Gomoku.make_move(self.board, current_player, chosen_child.prevAction)
             move_count += 1
-
+            actions.append(chosen_child.prevAction)
+            # prev_action = chosen_child.prevAction
             winner = Gomoku.check_winner(self.board, root.currentPlayer, chosen_child.prevAction)
             if winner != -1:
                 if display:
@@ -152,4 +155,4 @@ class Gomoku(Game):
                 winner = -1
                 break
 
-        return boards, policy_distributions, qs, winner
+        return boards, actions, policy_distributions, qs, winner

@@ -9,51 +9,53 @@ import time
 def play_against_agent(Game, model, mcts_iterations, human_turn):
         if model is not None:
             model.eval()
-        current_player = 0
-        move_count = 0
-        game = Game()
-        while True:
-            Game.display_board(game.board)
+        with torch.no_grad():            
+            current_player = 0
+            move_count = 0
+            game = Game()
+            prevAction = None
+            while True:
+                Game.display_board(game.board)
 
-            if current_player == human_turn:
-                action = Game.get_input(game.board)
-                if action is None:
-                    print("Invalid move. Try again.")
-                    continue
+                if current_player == human_turn:
+                    action = Game.get_input(game.board)
+                    if action is None:
+                        print("Invalid move. Try again.")
+                        continue
 
-                current_player = Game.make_move(game.board, current_player, action)
-                move_count += 1
-
-                winner = Game.check_winner(game.board, 1 - current_player, action)
-                if winner != -1:
-                    Game.display_board(game.board)
-                    print("Player", winner, "wins!")
-                    break
-                elif move_count == Game.state_dim:
-                    Game.display_board(game.board)
-                    print("It's a draw!")
-                    break
-            else:
-                root = Node(None, None, current_player, move_count)
-                start_time = time.time()
-                Game.mcts(model, game.board, root, mcts_iterations) 
-                model_name = 'network' if model else 'vanilla'
-                Game.logger.debug(f'model: {model_name} mcts_iteration: {mcts_iterations}, time: {time.time() - start_time}s')
-                chosen_child = root.max_visit_child() 
-                for child in root.children:
-                    print(child.to_string(Game))
-                current_player = Game.make_move(game.board, current_player, chosen_child.prevAction)
-                move_count += 1
-
-                winner = Game.check_winner(game.board, root.currentPlayer, chosen_child.prevAction)
-                if winner != -1:
-                    Game.display_board(game.board)
-                    print("Player", winner, "wins!")
-                    break
-                elif move_count == Game.state_dim:
-                    Game.display_board(game.board)
-                    print("It's a draw!")
-                    break
+                    current_player = Game.make_move(game.board, current_player, action)
+                    move_count += 1
+                    prevAction = action
+                    winner = Game.check_winner(game.board, 1 - current_player, action)
+                    if winner != -1:
+                        Game.display_board(game.board)
+                        print("Player", winner, "wins!")
+                        break
+                    elif move_count == Game.state_dim:
+                        Game.display_board(game.board)
+                        print("It's a draw!")
+                        break
+                else:
+                    root = Node(None, prevAction, current_player, move_count)
+                    start_time = time.time()
+                    Game.mcts(model, game.board, root, mcts_iterations) 
+                    model_name = 'network' if model else 'vanilla'
+                    Game.logger.debug(f'model: {model_name} mcts_iteration: {mcts_iterations}, time: {time.time() - start_time}s')
+                    chosen_child = root.max_visit_child() 
+                    for child in root.children:
+                        print(child.to_string(Game))
+                    current_player = Game.make_move(game.board, current_player, chosen_child.prevAction)
+                    move_count += 1
+                    prevAction = chosen_child.prevAction
+                    winner = Game.check_winner(game.board, root.currentPlayer, chosen_child.prevAction)
+                    if winner != -1:
+                        Game.display_board(game.board)
+                        print("Player", winner, "wins!")
+                        break
+                    elif move_count == Game.state_dim:
+                        Game.display_board(game.board)
+                        print("It's a draw!")
+                        break
 
 def compete(Game, model1, model2, model1_mcts_iter = 50, model2_mcts_iter = 50, sampling = False, display = False):
         """
@@ -67,7 +69,9 @@ def compete(Game, model1, model2, model1_mcts_iter = 50, model2_mcts_iter = 50, 
         current_player = 0
         move_count = 0
         game = Game()
+        # prev_action = None
         while True:
+            
             if display:
                 Game.display_board(game.board)
                 print()
@@ -80,13 +84,13 @@ def compete(Game, model1, model2, model1_mcts_iter = 50, model2_mcts_iter = 50, 
                 Game.mcts(model2, game.board, root, model2_mcts_iter)
 
             if sampling:
-                chosen_child = root.sample_child(Game) if move_count < 10 else root.max_visit_child()
+                chosen_child = root.sample_child(Game) if move_count < 20 else root.max_visit_child()
             else:
                 chosen_child = root.max_visit_child()
 
             current_player = Game.make_move(game.board, current_player, chosen_child.prevAction)
             move_count += 1
-
+            # prev_action = chosen_child.prevAction
             winner = Game.check_winner(game.board, root.currentPlayer, chosen_child.prevAction)
             if winner != -1:
                 if display:

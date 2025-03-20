@@ -5,17 +5,62 @@ import test
 import time
 import numpy as np
 
+def rotate_data(board, policy, k):
+    channel, rows, cols = board.shape
+    rotated_board = np.rot90(board,k=k, axes=(1, 2)).copy()
+    policy_2d = policy.reshape((rows, cols)).copy()
+    policy_2d = np.rot90(policy_2d, k=k)
+    rotated_policy_1d = policy_2d.flatten()
+
+    return rotated_board, rotated_policy_1d
+
+def flip_data(board, policy, mode):
+    channel, rows, cols = board.shape
+    policy_2d = policy.reshape((rows, cols)).copy()
+    if mode == 'lr':
+        flipped_board = np.flip(board, axis=2).copy() # left right flip
+        flipped_policy = np.flip(policy_2d, axis=1).copy()
+    else:
+        flipped_board = np.flip(board, axis=1).copy() # tob bottom flip
+        flipped_policy = np.flip(policy_2d, axis=0).copy()
+
+    return flipped_board, flipped_policy.flatten()
+    
+
 def save_data_to_buffer(buffer: ReplayBuffer, data):
-    boards, policies, qs, winner, reward = data
+    boards, actions, policies, qs, winner, reward = data
+    epsilon = 0.3
     for i in range(len(boards)):
-        if boards[i][2,0,0] == 0:
-            # buffer.add(boards[i], policies[i], [reward] if boards[i][2,0,0] == winner else [-reward])
-            buffer.add(boards[i], policies[i], [(reward + qs[i])/2] if boards[i][2,0,0] == winner else [(-reward + qs[i])/2])
+        # if actions[i][0] != -1:
+            # boards[i][2, actions[i][0], actions[i][1]] = 1
+        if boards[i][-1,0,0] == 0:
+            # buffer.add(boards[i], policies[i], [reward] if boards[i][-1,0,0] == winner else [-reward])
+            for r in range(0,4):
+                board, policy = rotate_data(boards[i], policies[i], k=r)
+                buffer.add(board, policy, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
+                if r == 0 or r == 1:
+                    board_lr, policy_lr = flip_data(board, policy, 'lr')
+                    board_tb, policy_tb = flip_data(board, policy, 'tb')
+                    buffer.add(board_lr, policy_lr, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
+                    buffer.add(board_tb, policy_tb, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
+                if i == 0 or i == 1:
+                    break
+
         else:
             board_for_model = np.empty_like(boards[i])
+            # board_for_model[0], board_for_model[1], board_for_model[2], board_for_model[3] = boards[i][1], boards[i][0], boards[i][2], boards[i][3]
             board_for_model[0], board_for_model[1], board_for_model[2] = boards[i][1], boards[i][0], boards[i][2]
-            # buffer.add(board, policies[i], [reward] if boards[i][2,0,0] == winner else [-reward])
-            buffer.add(board_for_model, policies[i], [(reward + qs[i])/2] if boards[i][2,0,0] == winner else [(-reward + qs[i])/2])
+            # buffer.add(board_for_model, policies[i], [reward] if boards[i][-1,0,0] == winner else [-reward])
+            for r in range(0,4):
+                board, policy = rotate_data(board_for_model, policies[i], k=r)
+                buffer.add(board, policy, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
+                if r == 0 or r == 1:
+                    board_lr, policy_lr = flip_data(board, policy, 'lr')
+                    board_tb, policy_tb = flip_data(board, policy, 'tb')
+                    buffer.add(board_lr, policy_lr, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
+                    buffer.add(board_tb, policy_tb, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
+                if i == 0 or i == 1:
+                    break
         
 
 
@@ -32,7 +77,7 @@ def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_i
         for iter in range(iterations):
             game = Game()
             start_time = time.time()
-            boards, policy_distributions, qs, winner = game.self_play(model, mcts_iter, display)
+            boards, actions, policy_distributions, qs, winner = game.self_play(model, mcts_iter, display)
             total_time += (time.time() - start_time)
             if winner == -1: # draw
                 reward = 0
@@ -40,9 +85,10 @@ def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_i
             else:
                 reward = 1
                 game_results[0 if winner == 0 else 1] += 1
-            save_data_to_buffer(buffer, (boards, policy_distributions, qs, winner, reward))
+            save_data_to_buffer(buffer, (boards, actions, policy_distributions, qs, winner, reward))
                 
             Game.logger.debug(f'collect_data iter({iter+1}/{iterations}) time: {time.time()-start_time}s, game results: {game_results}')
+            
             if (iter+1) % 20 == 0:
                 print("iter:",iter+1,"Player", winner, "wins!", 'game_results:', game_results)
             print(f'buffer status:{buffer.size()}')

@@ -4,6 +4,11 @@ import logging
 import os
 import torch
 
+def make_last_move_feature(Game, last_action: tuple):
+    feature = np.zeros((1, Game.rows, Game.cols), dtype=np.float32)
+    feature[last_action[0], last_action[1]] = 1
+    return  feature
+
 def add_dirichlet_noise(priors, epsilon=0.25, alpha=0.03):
         """
             주어진 prior 확률 분포에 Dirichlet noise를 추가합니다.
@@ -17,25 +22,25 @@ def add_dirichlet_noise(priors, epsilon=0.25, alpha=0.03):
             noise가 추가된 새로운 prior 확률 분포.
         """
         noise = np.random.dirichlet([alpha] * len(priors))
-        new_priors = (1 - epsilon) * priors + epsilon * noise
-        return new_priors
+        new_policy = (1 - epsilon) * priors + epsilon * noise
+        # new_policy /= np.sum(new_policy)
+        return new_policy
 
 def calcUcbOfChildrenFromParent(node: 'Node', mode: str = 'normal'):
     
     for child in node.children:
         if child.visit == 0:
-                # child.ucb = np.inf
+            if mode != 'normal':
+                child.ucb = child.prior * math.sqrt(node.visit) / (child.visit+1)
+            else:
+                child.ucb = math.sqrt(2 * math.log(node.visit) / (child.visit+1))
             continue
+
         if mode != 'normal':
-            # if child.visit == 0:
-            #     q = 0
-            # else:
-            #     q = (child.value / child.visit)
-            c_puct = 1
-            child.ucb = (child.value / child.visit) + c_puct * child.prior * math.sqrt(math.log(node.visit) / (child.visit+1))
+            child.ucb = (child.value / child.visit) + child.prior * math.sqrt(node.visit) / (child.visit+1)
         else:
             
-            child.ucb = (child.value / child.visit) + math.sqrt(2 * math.log(node.visit) / child.visit)
+            child.ucb = (child.value / child.visit) + math.sqrt(2 * math.log(node.visit) / (child.visit+1))
     return
 
 def get_probablity_distribution_of_children(node: 'Node', Game):

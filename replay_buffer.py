@@ -26,6 +26,9 @@ class ReplayBuffer:
     
     def head(self, size):
         for i in range(size):
+            print(self.buffer[i])
+    def tail(self, size):
+        for i in range(1, size+1):
             print(self.buffer[-i])
 
     def size(self):
