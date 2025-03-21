@@ -29,7 +29,7 @@ def flip_data(board, policy, mode):
 
 def save_data_to_buffer(buffer: ReplayBuffer, data):
     boards, actions, policies, qs, winner, reward = data
-    epsilon = 0.3
+    epsilon = 0.5
     for i in range(len(boards)):
         # if actions[i][0] != -1:
             # boards[i][2, actions[i][0], actions[i][1]] = 1

@@ -49,9 +49,9 @@ class MCTS:
                     MCTS.matched += 1
                 else:
                     if node.currentPlayer == 1:
-                        board_for_model = np.empty_like(board)
-                        # 플레이어 관점 전환: 현재 플레이어가 1이면 채널 스왑
-                        board_for_model[0], board_for_model[1], board_for_model[2] = board[1], board[0], board[2]
+                        # board_for_model = np.empty_like(board)
+                        # # 플레이어 관점 전환: 현재 플레이어가 1이면 채널 스왑
+                        # board_for_model[0], board_for_model[1], board_for_model[2] = board[1], board[0], board[2]
                         policy_logits, value = model(torch.from_numpy(board_for_model).unsqueeze(0))
                     else:
                         policy_logits, value = model(torch.from_numpy(board).unsqueeze(0))
@@ -60,8 +60,8 @@ class MCTS:
                     policy_softmax = np.exp(policy_logits) / np.sum(np.exp(policy_logits))
                     # 캐시에 저장
                     MCTS.cache[board_key] = (policy_softmax, value)
-                if (not node.parent) and dirichlet:
-                    policy_softmax = utils.add_dirichlet_noise(policy_softmax)
+                    if (not node.parent) and dirichlet:
+                        policy_softmax = utils.add_dirichlet_noise(policy_softmax)
                 node.expand(valid_moves, policy_softmax, Game)
                 result = -value.item()
             else:
