@@ -4,9 +4,9 @@ import torch.nn.functional as F
 import torch.nn.utils.rnn as rnn_utils
 
 class PatchEmbedding(nn.Module):
-    def __init__(self, img_size, patch_size, embed_dim):
+    def __init__(self, img_size, patch_size, embed_dim, channels):
         super().__init__()
-        self.patch_embed = nn.Conv2d(3, embed_dim, kernel_size=patch_size, stride=patch_size)
+        self.patch_embed = nn.Conv2d(channels, embed_dim, kernel_size=patch_size, stride=patch_size)
 
     def forward(self, x):
         x = self.patch_embed(x)
@@ -14,9 +14,9 @@ class PatchEmbedding(nn.Module):
         return x
 
 class ViTEmbedding(nn.Module):
-    def __init__(self, img_size, patch_size, embed_dim):
+    def __init__(self, img_size, patch_size, embed_dim, channels):
         super().__init__()
-        self.patch_embed = PatchEmbedding(img_size, patch_size, embed_dim)
+        self.patch_embed = PatchEmbedding(img_size, patch_size, embed_dim, channels)
         num_patches = (img_size // patch_size) ** 2
 
         self.cls_token = nn.Parameter(torch.randn(1, 1, embed_dim))
@@ -59,9 +59,9 @@ class AttentionBlock(nn.Module):
         return x
 
 class Net(nn.Module):
-    def __init__(self, img_size, patch_size, embed_dim, action_dim, num_heads, depth, dropout=0.0):
+    def __init__(self, img_size, patch_size, embed_dim, action_dim, num_heads, depth, channels, dropout=0.0):
         super().__init__()
-        self.embedding = ViTEmbedding(img_size, patch_size, embed_dim)
+        self.embedding = ViTEmbedding(img_size, patch_size, embed_dim, channels)
         self.blocks = nn.ModuleList([
             AttentionBlock(embed_dim, num_heads, dropout) for _ in range(depth)
         ])

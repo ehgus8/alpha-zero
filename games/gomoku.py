@@ -7,10 +7,10 @@ import utils
 
 
 class Gomoku(Game):
-    rows, cols = 15, 15
+    rows, cols = 7, 7
     action_dim = rows * cols
     state_dim = rows * cols
-    feature_dim = 3
+    feature_dim = 2
     logger = utils.get_game_logger('Gomoku')
 
     def __init__(self):
@@ -30,6 +30,15 @@ class Gomoku(Game):
         for i, row in enumerate(display):
             print(i % 10, ' '.join(row))    
         print()
+
+    @staticmethod
+    def get_canonical_board(board: np.array, current_player):
+        if current_player == 0:
+            return board
+        copied_board = np.empty_like(board)
+        copied_board[0], copied_board[1] = board[1], board[0]
+        return copied_board
+
     @staticmethod
     def get_action_idx(action: tuple[int, int]):
         """
@@ -43,7 +52,6 @@ class Gomoku(Game):
         row, col = action
         if board[0, row, col] == 0 and board[1, row, col] == 0:
             board[current_player, row, col] = 1
-            board[-1, :, :] = 1 - current_player
             return 1 - current_player
         else:
             print("Invalid move. Try again.")

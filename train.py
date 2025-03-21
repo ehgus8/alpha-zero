@@ -30,37 +30,22 @@ def flip_data(board, policy, mode):
 def save_data_to_buffer(buffer: ReplayBuffer, data):
     boards, actions, policies, qs, winner, reward = data
     epsilon = 0.5
+    currentPlayer = 0
     for i in range(len(boards)):
-        # if actions[i][0] != -1:
-            # boards[i][2, actions[i][0], actions[i][1]] = 1
-        if boards[i][-1,0,0] == 0:
-            # buffer.add(boards[i], policies[i], [reward] if boards[i][-1,0,0] == winner else [-reward])
-            for r in range(0,4):
+            reward_target = [(reward*(1-epsilon) + qs[i]*epsilon)] if currentPlayer == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)]
+            currentPlayer = 1 - currentPlayer
+            if i == 0 or i == 1: # i = 0 : empty board, i = 1 : only one stone in center if gomoku. so doesn't need agumentation
+                buffer.add(boards[i], policies[i], reward_target)
+                continue
+            for r in range(0,4): # 0 90 180 270
                 board, policy = rotate_data(boards[i], policies[i], k=r)
-                buffer.add(board, policy, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
+                buffer.add(board, policy, reward_target)
                 if r == 0 or r == 1:
                     board_lr, policy_lr = flip_data(board, policy, 'lr')
                     board_tb, policy_tb = flip_data(board, policy, 'tb')
-                    buffer.add(board_lr, policy_lr, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
-                    buffer.add(board_tb, policy_tb, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
-                if i == 0 or i == 1:
-                    break
-
-        else:
-            board_for_model = np.empty_like(boards[i])
-            # board_for_model[0], board_for_model[1], board_for_model[2], board_for_model[3] = boards[i][1], boards[i][0], boards[i][2], boards[i][3]
-            board_for_model[0], board_for_model[1], board_for_model[2] = boards[i][1], boards[i][0], boards[i][2]
-            # buffer.add(board_for_model, policies[i], [reward] if boards[i][-1,0,0] == winner else [-reward])
-            for r in range(0,4):
-                board, policy = rotate_data(board_for_model, policies[i], k=r)
-                buffer.add(board, policy, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
-                if r == 0 or r == 1:
-                    board_lr, policy_lr = flip_data(board, policy, 'lr')
-                    board_tb, policy_tb = flip_data(board, policy, 'tb')
-                    buffer.add(board_lr, policy_lr, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
-                    buffer.add(board_tb, policy_tb, [(reward*(1-epsilon) + qs[i]*epsilon)] if boards[i][-1,0,0] == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)])
-                if i == 0 or i == 1:
-                    break
+                    buffer.add(board_lr, policy_lr, reward_target)
+                    buffer.add(board_tb, policy_tb, reward_target)
+                
         
 
 

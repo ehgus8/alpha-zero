@@ -120,18 +120,18 @@ def expand_transformer_layers(Game, old_model, new_num_layers):
     return new_model
 
 
-def train_mode(Game, model_version: int, load_model: bool, collect_data_iterations: int):
+def train_mode(Game, model_version: int, load_model: bool, collect_data_iterations: int, mcts_iterations):
     """
     Call start train loop
     """
-    buffer_size = 600000
+    buffer_size = 300000
     buffer = ReplayBuffer(buffer_size)
     buffer.load_pickle('replay_buffer_v16_i_14')
     
-    num_transformer_layers = 2
-    new_num_transformer_layers = 2
+    num_transformer_layers = 1
+    new_num_transformer_layers = 1
     num_heads = 8
-    older_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=num_heads, depth=num_transformer_layers, dropout=0.1)
+    older_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=num_heads, depth=num_transformer_layers, channels=Game.feature_dim, dropout=0.1)
     # older_model = Net(Game.state_dim, Game.action_dim, num_transformer_layers)
     if load_model:
         older_model = utils.load_model(older_model, f'model_v{model_version}.pth')
@@ -140,24 +140,26 @@ def train_mode(Game, model_version: int, load_model: bool, collect_data_iteratio
     # older_model = expand_transformer_layers(Game, older_model, new_num_layers = new_num_transformer_layers)
     
     # newer_model
-    newer_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=num_heads, depth=new_num_transformer_layers, dropout=0.1)
+    newer_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=num_heads, depth=new_num_transformer_layers, channels=Game.feature_dim, dropout=0.1)
     # newer_model = Net(Game.state_dim, Game.action_dim, num_transformer_layers)
     newer_model.load_state_dict(older_model.state_dict())
     for name, param in newer_model.named_parameters():
         print(f"{name}: {param.numel()} parameters")
 
     print(f'buffer status:{buffer.size()}/{buffer_size}')
+
     start_train_loop(Game, older_model, newer_model, model_version,
                         buffer, buffer_size,
-                        collect_data_iterations=collect_data_iterations, batch_size=256, mcts_iter=200, 
+                        collect_data_iterations=collect_data_iterations, batch_size=256, mcts_iter=mcts_iterations, 
                         display=True)
 
 if __name__ == "__main__":
     
     # for background execute
     # train_mode(Gomoku, 2,  True)
-    # train_mode(Gomoku, 17, load_model=True,
-    #                    collect_data_iterations = 400)
+    train_mode(Gomoku, 17, load_model=False,
+                       collect_data_iterations = 400,
+                       mcts_iterations = 100)
     while True:
         print('select the mode')
         print('1. train')
@@ -171,8 +173,9 @@ if __name__ == "__main__":
             Call start train loop
             """
 
-            train_mode(Game, 17, load_model=True,
-                       collect_data_iterations = 400)
+            train_mode(Game, 17, load_model=False,
+                       collect_data_iterations = 400,
+                       mcts_iterations = 100)
 
 
         elif mode == 2:

@@ -34,13 +34,8 @@ class MCTS:
             valid_moves = Game.get_valid_moves(board)
             if model:
                 # 캐시된 결과가 있는지 체크: board를 bytes로 변환하여 key로 사용
-
-                if node.currentPlayer == 1:
-                    board_for_model = np.empty_like(board)
-                    board_for_model[0], board_for_model[1], board_for_model[2] = board[1], board[0], board[2]
-                    board_key = board_for_model.tobytes()
-                else:
-                    board_key = board.tobytes()
+                canonical_board = Game.get_canonical_board(board, node.currentPlayer)
+                board_key = canonical_board.tobytes()
 
                 if board_key in MCTS.cache:
                     policy_softmax, value = MCTS.cache[board_key]
@@ -48,20 +43,15 @@ class MCTS:
                         policy_softmax = utils.add_dirichlet_noise(policy_softmax)
                     MCTS.matched += 1
                 else:
-                    if node.currentPlayer == 1:
-                        # board_for_model = np.empty_like(board)
-                        # # 플레이어 관점 전환: 현재 플레이어가 1이면 채널 스왑
-                        # board_for_model[0], board_for_model[1], board_for_model[2] = board[1], board[0], board[2]
-                        policy_logits, value = model(torch.from_numpy(board_for_model).unsqueeze(0))
-                    else:
-                        policy_logits, value = model(torch.from_numpy(board).unsqueeze(0))
+                    policy_logits, value = model(torch.from_numpy(canonical_board).unsqueeze(0))
                         
                     policy_logits = policy_logits.squeeze(0).numpy()
                     policy_softmax = np.exp(policy_logits) / np.sum(np.exp(policy_logits))
-                    # 캐시에 저장
+                    # caching
                     MCTS.cache[board_key] = (policy_softmax, value)
                     if (not node.parent) and dirichlet:
                         policy_softmax = utils.add_dirichlet_noise(policy_softmax)
+
                 node.expand(valid_moves, policy_softmax, Game)
                 result = -value.item()
             else:
