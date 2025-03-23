@@ -7,7 +7,7 @@ import utils
 
 
 class Gomoku(Game):
-    rows, cols = 7, 7
+    rows, cols = 15, 15
     action_dim = rows * cols
     state_dim = rows * cols
     feature_dim = 2
@@ -61,7 +61,6 @@ class Gomoku(Game):
     def undo_move(board, current_player, action):
         row, col = action
         board[1 - current_player, row, col] = 0
-        # board[2, :, :] = 1 - current_player
 
     @staticmethod
     def check_winner(board, player, action):

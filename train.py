@@ -27,22 +27,23 @@ def flip_data(board, policy, mode):
     return flipped_board, flipped_policy.flatten()
     
 
-def save_data_to_buffer(buffer: ReplayBuffer, data):
+def save_data_to_buffer(Game, buffer: ReplayBuffer, data):
     boards, actions, policies, qs, winner, reward = data
     epsilon = 0.5
     currentPlayer = 0
     for i in range(len(boards)):
             reward_target = [(reward*(1-epsilon) + qs[i]*epsilon)] if currentPlayer == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)]
+            canonical_board = Game.get_canonical_board(boards[i], currentPlayer)
             currentPlayer = 1 - currentPlayer
             if i == 0 or i == 1: # i = 0 : empty board, i = 1 : only one stone in center if gomoku. so doesn't need agumentation
-                buffer.add(boards[i], policies[i], reward_target)
+                buffer.add(canonical_board, policies[i], reward_target)
                 continue
             for r in range(0,4): # 0 90 180 270
-                board, policy = rotate_data(boards[i], policies[i], k=r)
-                buffer.add(board, policy, reward_target)
-                if r == 0 or r == 1:
-                    board_lr, policy_lr = flip_data(board, policy, 'lr')
-                    board_tb, policy_tb = flip_data(board, policy, 'tb')
+                board_rot, policy_rot = rotate_data(canonical_board, policies[i], k=r)
+                buffer.add(board_rot, policy_rot, reward_target)
+                if r == 0 or r == 1: # flip only when 0, 90 rotated
+                    board_lr, policy_lr = flip_data(board_rot, policy_rot, 'lr')
+                    board_tb, policy_tb = flip_data(board_rot, policy_rot, 'tb')
                     buffer.add(board_lr, policy_lr, reward_target)
                     buffer.add(board_tb, policy_tb, reward_target)
                 
@@ -70,7 +71,7 @@ def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_i
             else:
                 reward = 1
                 game_results[0 if winner == 0 else 1] += 1
-            save_data_to_buffer(buffer, (boards, actions, policy_distributions, qs, winner, reward))
+            save_data_to_buffer(Game, buffer, (boards, actions, policy_distributions, qs, winner, reward))
                 
             Game.logger.debug(f'collect_data iter({iter+1}/{iterations}) time: {time.time()-start_time}s, game results: {game_results}')
             

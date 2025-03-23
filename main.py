@@ -32,7 +32,7 @@ def start_train_loop(Game, older_model, newer_model, model_version,
 
         train.collect_data(Game, older_model, buffer, iterations=collect_data_iterations, mcts_iter=mcts_iter, display=display)
         print(f'buffer status:{buffer.size()}/{buffer_size}')
-        train_iterations = (buffer.size() // batch_size) * 10
+        train_iterations = (buffer.size() // batch_size) * 5
         print('train_iterations:',train_iterations)
         # buffer save
         if i % 1 == 0:
@@ -40,7 +40,7 @@ def start_train_loop(Game, older_model, newer_model, model_version,
             buffer.save_pickle(os.path.join(buffers_dir, f'replay_buffer_v{update_count}_i_{i}.pkl'))
 
         Game.logger.debug(f'after collect_data buffer status:{buffer.size()}/{buffer_size}')
-        lr = 0.0005
+        lr = 0.00025
         loss, policy_loss, value_loss, l2_reg = train.train(newer_model, batch_size, buffer=buffer, train_iterations=train_iterations, lr=lr, device='cuda')
         Game.logger.debug(f'loss: {loss}\n\t policy_loss:{policy_loss} value_loss: {value_loss}\n\t l2_loss: {l2_reg}')
 
@@ -72,8 +72,8 @@ def start_train_loop(Game, older_model, newer_model, model_version,
             
             # model compare with vanilla mcts
             if update_count % 10 == 0:
-                print(f'vanila mcts (iter: {min(mcts_iter*update_count, 400)}) vs newer model result:')
-                test.compare(Game, None, newer_model, min(mcts_iter*update_count, 400), mcts_iter, iterations=2, sampling=False, early_stopping=False)
+                print(f'vanila mcts (iter: {min(mcts_iter*update_count, 200)}) vs newer model result:')
+                test.compare(Game, None, newer_model, min(mcts_iter*update_count, 200), mcts_iter, iterations=2, sampling=False, early_stopping=False)
 
             model_reject_count = 0
         else:
@@ -124,12 +124,12 @@ def train_mode(Game, model_version: int, load_model: bool, collect_data_iteratio
     """
     Call start train loop
     """
-    buffer_size = 300000
+    buffer_size = 640000
     buffer = ReplayBuffer(buffer_size)
-    buffer.load_pickle('replay_buffer_v16_i_14')
+    buffer.load_pickle('replay_buffer_v12_i_13')
     
-    num_transformer_layers = 1
-    new_num_transformer_layers = 1
+    num_transformer_layers = 2
+    new_num_transformer_layers = 2
     num_heads = 8
     older_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=num_heads, depth=num_transformer_layers, channels=Game.feature_dim, dropout=0.1)
     # older_model = Net(Game.state_dim, Game.action_dim, num_transformer_layers)
@@ -157,9 +157,9 @@ if __name__ == "__main__":
     
     # for background execute
     # train_mode(Gomoku, 2,  True)
-    train_mode(Gomoku, 17, load_model=False,
-                       collect_data_iterations = 400,
-                       mcts_iterations = 100)
+    # train_mode(Gomoku, 13, load_model=True,
+    #                    collect_data_iterations = 500,
+    #                    mcts_iterations = 200)
     while True:
         print('select the mode')
         print('1. train')
@@ -184,16 +184,16 @@ if __name__ == "__main__":
             """
             Game = Gomoku
             num_transformer_layers = 2
-            best_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=8, depth=num_transformer_layers)
-            contender_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=8, depth=num_transformer_layers)
+            best_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=8, channels=Game.feature_dim, depth=num_transformer_layers)
+            contender_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=8, channels=Game.feature_dim, depth=num_transformer_layers)
             print('select best_model version:')
             best_model_num = int(input())
             best_model = utils.load_model(best_model, f'model_v{best_model_num}.pth')
             print('select contender_model version:')
             contender_model_num = int(input())
             contender_model = utils.load_model(contender_model, f'model_v{contender_model_num}.pth')
-            best_model_mcts_iter = 200
-            contender_model_mcts_iter = 200
+            best_model_mcts_iter = 100
+            contender_model_mcts_iter = 100
             test.compare(Game, best_model, contender_model, best_model_mcts_iter, contender_model_mcts_iter, 50, sampling=False,early_stopping=False)
         elif mode == 3:
             """
@@ -205,10 +205,10 @@ if __name__ == "__main__":
             num_transformer_layers = 2
             print('select model version:')
             model_version = int(input())
-            older_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=8, depth=num_transformer_layers)
+            older_model = Net(Game.rows, patch_size=3, embed_dim=256, action_dim=Game.action_dim,num_heads=8, channels=Game.feature_dim, depth=num_transformer_layers)
             # older_model = Net(Game.state_dim, Game.action_dim, num_transformer_layers)
             older_model = utils.load_model(older_model, f'model_v{model_version}.pth')
-            test.play_against_agent(Game, older_model, 400, human_turn)
+            test.play_against_agent(Game, older_model, 600, human_turn)
         elif mode == 4:
             Game = Gomoku
             buffer_size = 120000
