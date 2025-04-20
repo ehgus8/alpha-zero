@@ -7,7 +7,7 @@ import utils
 
 
 class Gomoku(Game):
-    rows, cols = 15, 15
+    rows, cols = 7, 7
     action_dim = rows * cols
     state_dim = rows * cols
     feature_dim = 2
@@ -141,7 +141,7 @@ class Gomoku(Game):
             qs.append(root.value / root.visit)
 
             if model:
-                chosen_child = root.sample_child(Gomoku) if move_count < 60 else root.max_visit_child()
+                chosen_child = root.sample_child(Gomoku) if move_count < 8 else root.max_visit_child()
             else:
                 chosen_child = root.max_visit_child()
             

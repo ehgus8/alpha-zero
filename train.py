@@ -32,7 +32,8 @@ def save_data_to_buffer(Game, buffer: ReplayBuffer, data):
     epsilon = 0.5
     currentPlayer = 0
     for i in range(len(boards)):
-            reward_target = [(reward*(1-epsilon) + qs[i]*epsilon)] if currentPlayer == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)]
+            # reward_target = [(reward*(1-epsilon) + qs[i]*epsilon)] if currentPlayer == winner else [((-reward)*(1-epsilon) + qs[i]*epsilon)]
+            reward_target = [reward] if currentPlayer == winner else [-reward]
             canonical_board = Game.get_canonical_board(boards[i], currentPlayer)
             currentPlayer = 1 - currentPlayer
             if i == 0 or i == 1: # i = 0 : empty board, i = 1 : only one stone in center if gomoku. so doesn't need agumentation
