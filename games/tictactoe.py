@@ -26,6 +26,22 @@ class TicTacToe(Game):
         # print(board[2])
 
     @staticmethod
+    def get_canonical_board(board: np.ndarray, current_player: int):
+        """Return a canonical representation of ``board``.
+
+        If ``current_player`` is ``1`` the first two planes are swapped so that
+        plane ``0`` always represents the current player.  The returned array
+        keeps the same shape and ``dtype`` as the input.
+        """
+        if current_player == 0:
+            return board
+        canonical = np.empty_like(board)
+        canonical[0], canonical[1] = board[1], board[0]
+        if board.shape[0] > 2:
+            canonical[2:] = board[2:]
+        return canonical
+
+    @staticmethod
     def get_action_idx(action: tuple[int, int]):
         """
         Returns:
