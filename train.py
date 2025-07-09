@@ -6,6 +6,15 @@ import time
 import numpy as np
 
 def rotate_data(board, policy, k):
+    """
+    보드와 정책 분포를 k*90도 회전시킵니다.
+    Args:
+        board (np.ndarray): (C, H, W) 형태의 보드
+        policy (np.ndarray): 1D 정책 분포
+        k (int): 90도 회전 횟수
+    Returns:
+        (rotated_board, rotated_policy_1d): 회전된 보드와 정책 분포
+    """
     channel, rows, cols = board.shape
     rotated_board = np.rot90(board,k=k, axes=(1, 2)).copy()
     policy_2d = policy.reshape((rows, cols)).copy()
@@ -15,6 +24,15 @@ def rotate_data(board, policy, k):
     return rotated_board, rotated_policy_1d
 
 def flip_data(board, policy, mode):
+    """
+    보드와 정책 분포를 좌우/상하로 뒤집습니다.
+    Args:
+        board (np.ndarray): (C, H, W) 형태의 보드
+        policy (np.ndarray): 1D 정책 분포
+        mode (str): 'lr'(좌우) 또는 'tb'(상하)
+    Returns:
+        (flipped_board, flipped_policy): 뒤집힌 보드와 정책 분포
+    """
     channel, rows, cols = board.shape
     policy_2d = policy.reshape((rows, cols)).copy()
     if mode == 'lr':
@@ -28,6 +46,15 @@ def flip_data(board, policy, mode):
     
 
 def save_data_to_buffer(Game, buffer: ReplayBuffer, data):
+    """
+    self-play 결과 데이터를 버퍼에 저장하고, 데이터 증강(회전/뒤집기)도 수행합니다.
+    Args:
+        Game: 게임 클래스
+        buffer: ReplayBuffer 인스턴스
+        data: (boards, actions, policies, qs, winner, reward) 튜플
+    Returns:
+        없음
+    """
     boards, actions, policies, qs, winner, reward = data
     epsilon = 0.5
     currentPlayer = 0
@@ -53,9 +80,16 @@ def save_data_to_buffer(Game, buffer: ReplayBuffer, data):
 
 def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_iter: int, display=False):
     """
-    Generate self-play data using MCTS.
-    Arge:
-        model (nn.Module): The neural network model.
+    MCTS 기반 self-play로 데이터를 생성하고 버퍼에 저장합니다.
+    Args:
+        Game: 게임 클래스
+        model: 신경망 모델
+        buffer: ReplayBuffer 인스턴스
+        iterations: self-play 반복 횟수
+        mcts_iter: MCTS 반복 횟수
+        display: 보드 출력 여부
+    Returns:
+        없음
     """
     model.eval()
     total_time = 0
@@ -77,16 +111,23 @@ def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_i
             Game.logger.debug(f'collect_data iter({iter+1}/{iterations}) time: {time.time()-start_time}s, game results: {game_results}')
             
             if (iter+1) % 20 == 0:
-                print("iter:",iter+1,"Player", winner, "wins!", 'game_results:', game_results)
-            print(f'buffer status:{buffer.size()}')
+                Game.logger.info(f"iter: {iter+1} Player {winner} wins! game_results: {game_results}")
+            Game.logger.info(f'buffer status: {buffer.size()}')
     Game.logger.debug(f'collect_data iter:{iterations} total time: {total_time}s average time per game: {total_time/iterations}s\n' +
                       f'game results: {game_results}')
 
 def train(model: Net, batch_size: int, buffer: ReplayBuffer, train_iterations, lr, device):
     """
-    Train the model using MCTS.
-    Arge:
-        model (nn.Module): The neural network model.
+    버퍼에서 샘플링한 데이터로 모델을 학습합니다.
+    Args:
+        model: 신경망 모델
+        batch_size: 배치 크기
+        buffer: ReplayBuffer 인스턴스
+        train_iterations: 학습 반복 횟수
+        lr: 학습률
+        device: 학습 디바이스 (예: 'cuda', 'cpu')
+    Returns:
+        (loss, policy_loss, value_loss, l2_reg): 최종 손실값들
     """
     model.to(device)
     model.train()

@@ -34,17 +34,20 @@ class ReplayBuffer:
     def size(self):
         return len(self.buffer)
     
-    def save_pickle(self, filename):
+    def save_pickle(self, filename, clean_old=True):
         folder = os.path.dirname(filename)
-        if os.path.exists(folder):
-            # 폴더 내에서 'replay_buffer'로 시작하는 파일만 삭제합니다.
-            for file in os.listdir(folder):
-                if file.startswith('replay_buffer'):
-                    file_path = os.path.join(folder, file)
-                    if os.path.isfile(file_path):
-                        os.remove(file_path)
+        if clean_old:
+            if os.path.exists(folder):
+                for file in os.listdir(folder):
+                    if file.startswith('replay_buffer'):
+                        file_path = os.path.join(folder, file)
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+            else:
+                os.makedirs(folder)
         else:
-            os.makedirs(folder)
+            if not os.path.exists(folder):
+                os.makedirs(folder)
 
         try:
             with open(filename, 'wb') as f:
@@ -52,7 +55,6 @@ class ReplayBuffer:
             print(f"Replay Buffer saved to {filename} successfully.")
         except Exception as e:
             print("Failed to save Replay Buffer.", e)
-
 
     def load_pickle(self, filename):
         buffer_path = os.path.join(os.path.dirname(__file__), f'replay_buffers/{filename}.pkl')

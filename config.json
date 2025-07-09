@@ -1,0 +1,26 @@
+{
+  "train": {
+    "buffer_size": 100000,
+    "collect_data_iterations": 10,
+    "batch_size": 512,
+    "mcts_iter": 100,
+    "lr": 0.00025,
+    "num_transformer_layers": 1,
+    "new_num_transformer_layers": 1,
+    "num_heads": 8,
+    "patch_size": 5,
+    "embed_dim": 512,
+    "dropout": 0.1
+  },
+  "model": {
+    "save_dir": "models",
+    "default_version": 0
+  },
+  "buffer": {
+    "save_dir": "replay_buffers"
+  },
+  "test": {
+    "iterations": 50,
+    "mcts_iter": 100
+  }
+}

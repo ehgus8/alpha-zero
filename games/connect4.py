@@ -108,11 +108,15 @@ class Connect4(Game):
 
     @staticmethod
     def get_input(board):
-        col = int(input("Enter column (0~6): "))
-        row = Connect4.get_drop_row(board, col)
-        if row is None:
-            return None
-        return (row, col)
+        while True:
+            try:
+                col = int(input("Enter column (0~6): "))
+                if col < 0 or col > 6 or any(board[:, 0, col] != 0):
+                    print("잘못된 열이거나 이미 가득 찬 열입니다. 다시 입력하세요.")
+                    continue
+                return col
+            except Exception:
+                print("잘못된 입력입니다. 다시 입력하세요.")
 
     def self_play(self, model, mcts_iter, display = False):
 

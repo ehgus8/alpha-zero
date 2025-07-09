@@ -114,11 +114,17 @@ class Gomoku(Game):
         """
         MCTS.mcts(model, board, root, Gomoku, mcts_iterations, dirichlet)
 
+    @staticmethod
     def get_input(board):
-        row, col = map(int, input("Enter row and column: ").split())
-        if board[0, row, col] == 1 or board[1, row, col] == 1:
-            return None
-        return (row, col)
+        while True:
+            try:
+                row, col = map(int, input("Enter row and column: ").split())
+                if board[0, row, col] == 1 or board[1, row, col] == 1:
+                    print("이미 돌이 놓인 자리입니다. 다시 입력하세요.")
+                    continue
+                return (row, col)
+            except Exception:
+                print("잘못된 입력입니다. 다시 입력하세요.")
 
     def self_play(self, model, mcts_iter, display = False):
 

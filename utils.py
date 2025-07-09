@@ -3,6 +3,12 @@ import math
 import logging
 import os
 import torch
+import json
+
+with open('config.json') as f:
+    config = json.load(f)
+MODEL_CFG = config['model']
+
 
 def make_last_move_feature(Game, last_action: tuple):
     feature = np.zeros((1, Game.rows, Game.cols), dtype=np.float32)
@@ -56,15 +62,18 @@ def get_probablity_distribution_of_children(node: 'Node', Game):
 
 def save_model(model, version: int):
     # model save
-    models_dir = os.path.join(os.path.dirname(__file__), 'models')
+    models_dir = os.path.join(os.path.dirname(__file__), MODEL_CFG['save_dir'])
     os.makedirs(models_dir, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(models_dir, f'model_v{version}.pth'))
 
 def load_model(model: 'Net', name: str):
     """
-    Load the model from the path.
+    Load the model from the path. 파일이 없으면 예외와 안내 메시지 출력.
     """
-    model_path = os.path.join(os.path.dirname(__file__), f'models/{name}')
+    model_path = os.path.join(os.path.dirname(__file__), f"{MODEL_CFG['save_dir']}/{name}")
+    if not os.path.exists(model_path):
+        print(f"[ERROR] 모델 파일이 존재하지 않습니다: {model_path}")
+        raise FileNotFoundError(f"Model file not found: {model_path}")
     model.load_state_dict(torch.load(model_path))
     return model
 
