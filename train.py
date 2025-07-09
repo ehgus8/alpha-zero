@@ -80,7 +80,10 @@ def save_data_to_buffer(Game, buffer: ReplayBuffer, data):
 
 
 def _self_play_worker(args):
-    Game, model, mcts_iter = args
+    Game, model_state_dict, model_cfg, mcts_iter = args
+    model = Net(**model_cfg)
+    model.load_state_dict(model_state_dict)
+    model.eval()
     game = Game()
     result = game.self_play(model, mcts_iter, display=False)
     return result
@@ -124,7 +127,18 @@ def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_i
                 Game.logger.info(f'buffer status: {buffer.size()}')
         else:
             ctx = mp.get_context("spawn")
-            tasks = [(Game, model, mcts_iter) for _ in range(iterations)]
+            model_cfg = {
+                "img_size": Game.rows,
+                "patch_size": model.embedding.patch_embed.patch_embed.kernel_size[0],
+                "embed_dim": model.policy_head.in_features,
+                "action_dim": Game.action_dim,
+                "num_heads": model.blocks[0].attn.num_heads,
+                "depth": len(model.blocks),
+                "channels": model.embedding.patch_embed.patch_embed.in_channels,
+                "dropout": model.blocks[0].attn.dropout.p,
+            }
+            model_state = model.state_dict()
+            tasks = [(Game, model_state, model_cfg, mcts_iter) for _ in range(iterations)]
             start_time = time.time()
             with ctx.Pool(processes=num_processes) as pool:
                 for i, result in enumerate(pool.imap_unordered(_self_play_worker, tasks), 1):
