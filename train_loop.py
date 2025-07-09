@@ -50,7 +50,12 @@ def start_train_loop(Game, older_model, newer_model, model_version,
         print('update_count:', update_count)
         Game.logger.info(f'iteration: {i}, update_count: {update_count}')
 
-        train.collect_data(Game, older_model, buffer, iterations=collect_data_iterations, mcts_iter=mcts_iter, display=display)
+        num_processes = TRAIN_CFG.get('num_processes', 1)
+        train.collect_data(Game, older_model, buffer,
+                          iterations=collect_data_iterations,
+                          mcts_iter=mcts_iter,
+                          display=display,
+                          num_processes=num_processes)
         Game.logger.info(f'buffer status: {buffer.size()}/{buffer_size}')
         print(f'buffer status:{buffer.size()}/{buffer_size}')
         train_iterations = (buffer.size() // batch_size) * 1

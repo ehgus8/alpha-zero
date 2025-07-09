@@ -4,6 +4,7 @@ from replay_buffer import ReplayBuffer
 import test
 import time
 import numpy as np
+import multiprocessing as mp
 
 def rotate_data(board, policy, k):
     """
@@ -78,7 +79,14 @@ def save_data_to_buffer(Game, buffer: ReplayBuffer, data):
         
 
 
-def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_iter: int, display=False):
+def _self_play_worker(args):
+    Game, model, mcts_iter = args
+    game = Game()
+    result = game.self_play(model, mcts_iter, display=False)
+    return result
+
+
+def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_iter: int, display=False, num_processes: int = 1):
     """
     MCTS 기반 self-play로 데이터를 생성하고 버퍼에 저장합니다.
     Args:
@@ -95,24 +103,44 @@ def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_i
     total_time = 0
     game_results = [0,0,0] # first, second player, draw
     with torch.no_grad():
-        for iter in range(iterations):
-            game = Game()
+        if num_processes <= 1:
+            for iter in range(iterations):
+                game = Game()
+                start_time = time.time()
+                boards, actions, policy_distributions, qs, winner = game.self_play(model, mcts_iter, display)
+                total_time += (time.time() - start_time)
+                if winner == -1: # draw
+                    reward = 0
+                    game_results[2] += 1
+                else:
+                    reward = 1
+                    game_results[0 if winner == 0 else 1] += 1
+                save_data_to_buffer(Game, buffer, (boards, actions, policy_distributions, qs, winner, reward))
+
+                Game.logger.debug(f'collect_data iter({iter+1}/{iterations}) time: {time.time()-start_time}s, game results: {game_results}')
+
+                if (iter+1) % 20 == 0:
+                    Game.logger.info(f"iter: {iter+1} Player {winner} wins! game_results: {game_results}")
+                Game.logger.info(f'buffer status: {buffer.size()}')
+        else:
+            ctx = mp.get_context("spawn")
+            tasks = [(Game, model, mcts_iter) for _ in range(iterations)]
             start_time = time.time()
-            boards, actions, policy_distributions, qs, winner = game.self_play(model, mcts_iter, display)
-            total_time += (time.time() - start_time)
-            if winner == -1: # draw
-                reward = 0
-                game_results[2] += 1
-            else:
-                reward = 1
-                game_results[0 if winner == 0 else 1] += 1
-            save_data_to_buffer(Game, buffer, (boards, actions, policy_distributions, qs, winner, reward))
-                
-            Game.logger.debug(f'collect_data iter({iter+1}/{iterations}) time: {time.time()-start_time}s, game results: {game_results}')
-            
-            if (iter+1) % 20 == 0:
-                Game.logger.info(f"iter: {iter+1} Player {winner} wins! game_results: {game_results}")
-            Game.logger.info(f'buffer status: {buffer.size()}')
+            with ctx.Pool(processes=num_processes) as pool:
+                for i, result in enumerate(pool.imap_unordered(_self_play_worker, tasks), 1):
+                    boards, actions, policy_distributions, qs, winner = result
+                    if winner == -1:
+                        reward = 0
+                        game_results[2] += 1
+                    else:
+                        reward = 1
+                        game_results[0 if winner == 0 else 1] += 1
+                    save_data_to_buffer(Game, buffer, (boards, actions, policy_distributions, qs, winner, reward))
+                    Game.logger.debug(f'collect_data iter({i}/{iterations}) time: {time.time()-start_time}s, game results: {game_results}')
+                    if (i) % 20 == 0:
+                        Game.logger.info(f"iter: {i} Player {winner} wins! game_results: {game_results}")
+                    Game.logger.info(f'buffer status: {buffer.size()}')
+            total_time = time.time() - start_time
     Game.logger.debug(f'collect_data iter:{iterations} total time: {total_time}s average time per game: {total_time/iterations}s\n' +
                       f'game results: {game_results}')
 
