@@ -4,6 +4,8 @@ from replay_buffer import ReplayBuffer
 import test
 import time
 import numpy as np
+import multiprocessing
+import os
 
 def rotate_data(board, policy, k):
     """
@@ -76,45 +78,71 @@ def save_data_to_buffer(Game, buffer: ReplayBuffer, data):
                     buffer.add(board_tb, policy_tb, reward_target)
                 
         
+# 전역 변수로 각 워커의 모델을 저장합니다.
+_worker_model = None
+
+def _init_worker(model_class, model_state, model_args):
+    """각 워커 프로세스를 초기화하는 함수입니다."""
+    global _worker_model
+    _worker_model = model_class(**model_args)
+    _worker_model.load_state_dict(model_state)
+    _worker_model.eval()
+
+def _run_one_game(args):
+    """워커가 실행하는 단일 셀프 플레이 게임입니다."""
+    Game, mcts_iter, display = args
+    game = Game()
+    with torch.no_grad():
+        boards, actions, policy_distributions, qs, winner = game.self_play(_worker_model, mcts_iter, display)
+    
+    if winner == -1:
+        reward = 0
+        game_result_idx = 2  # Draw
+    else:
+        reward = 1
+        game_result_idx = 0 if winner == 0 else 1  # Black or White win
+        
+    return boards, actions, policy_distributions, qs, winner, reward, game_result_idx
 
 
-def collect_data(Game, model: Net, buffer: ReplayBuffer, iterations: int, mcts_iter: int, display=False):
+def collect_data(Game, model: Net, model_args: dict, buffer: ReplayBuffer, iterations: int, mcts_iter: int, num_workers: int, display=False):
     """
-    MCTS 기반 self-play로 데이터를 생성하고 버퍼에 저장합니다.
-    Args:
-        Game: 게임 클래스
-        model: 신경망 모델
-        buffer: ReplayBuffer 인스턴스
-        iterations: self-play 반복 횟수
-        mcts_iter: MCTS 반복 횟수
-        display: 보드 출력 여부
-    Returns:
-        없음
+    MCTS 기반 self-play를 병렬로 실행하여 데이터를 생성하고 버퍼에 저장합니다.
     """
     model.eval()
-    total_time = 0
-    game_results = [0,0,0] # first, second player, draw
-    with torch.no_grad():
-        for iter in range(iterations):
-            game = Game()
-            start_time = time.time()
-            boards, actions, policy_distributions, qs, winner = game.self_play(model, mcts_iter, display)
-            total_time += (time.time() - start_time)
-            if winner == -1: # draw
-                reward = 0
-                game_results[2] += 1
-            else:
-                reward = 1
-                game_results[0 if winner == 0 else 1] += 1
-            save_data_to_buffer(Game, buffer, (boards, actions, policy_distributions, qs, winner, reward))
-                
-            Game.logger.debug(f'collect_data iter({iter+1}/{iterations}) time: {time.time()-start_time}s, game results: {game_results}')
-            
-            if (iter+1) % 20 == 0:
-                Game.logger.info(f"iter: {iter+1} Player {winner} wins! game_results: {game_results}")
-            Game.logger.info(f'buffer status: {buffer.size()}')
+    model_state = model.state_dict()
+
+    # CPU에서 실행되도록 모델 상태를 확실히 합니다.
+    for k, v in model_state.items():
+        model_state[k] = v.cpu()
+
+    start_time = time.time()
+    
+    if num_workers == 0:
+        num_workers = os.cpu_count()
+    
+    args_list = [(Game, mcts_iter, display) for _ in range(iterations)]
+    
+    # 멀티프로세싱 풀을 사용하여 병렬로 게임을 실행합니다.
+    with multiprocessing.Pool(processes=num_workers, initializer=_init_worker, initargs=(Net, model_state, model_args)) as pool:
+        results = pool.map(_run_one_game, args_list)
+    
+    total_time = time.time() - start_time
+    
+    game_stats = [0, 0, 0]  # [Black wins, White wins, Draws]
+    for i, result_data in enumerate(results):
+        *game_data, game_result_idx = result_data
+        boards, actions, policies, qs, winner, reward = game_data
+        
+        save_data_to_buffer(Game, buffer, (boards, actions, policies, qs, winner, reward))
+        game_stats[game_result_idx] += 1
+        
+        Game.logger.debug(f'Game {i+1}/{iterations} finished. Winner: {winner}. Buffer size: {buffer.size()}')
+
+    Game.logger.info(f'Finished {iterations} games. Results: {game_stats}')
     Game.logger.debug(f'collect_data iter:{iterations} total time: {total_time}s average time per game: {total_time/iterations}s\n' +
-                      f'game results: {game_results}')
+                      f'game results: {game_stats}')
+
 
 def train(model: Net, batch_size: int, buffer: ReplayBuffer, train_iterations, lr, device):
     """

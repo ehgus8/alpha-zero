@@ -60,11 +60,12 @@ def get_probablity_distribution_of_children(node: 'Node', Game):
     probablity_distribution = visit_counts/np.sum(visit_counts)
     return probablity_distribution
 
-def save_model(model, version: int):
-    # model save
-    models_dir = os.path.join(os.path.dirname(__file__), MODEL_CFG['save_dir'])
-    os.makedirs(models_dir, exist_ok=True)
-    torch.save(model.state_dict(), os.path.join(models_dir, f'model_v{version}.pth'))
+def save_model(model: 'Net', version: int):
+    dir = 'models'
+    os.makedirs(dir, exist_ok=True)
+    path = os.path.join(dir, f'model_v{version}.pth')
+    torch.save(model.state_dict(), path)
+    print(f'model v{version} saved')
 
 def load_model(model: 'Net', name: str):
     """
@@ -76,6 +77,37 @@ def load_model(model: 'Net', name: str):
         raise FileNotFoundError(f"Model file not found: {model_path}")
     model.load_state_dict(torch.load(model_path))
     return model
+
+def load_latest_model(model, Game):
+    """
+    'models' 디렉토리에서 가장 최신 버전의 모델을 불러옵니다.
+    모델이 없으면 초기 상태의 모델과 버전 0을 반환합니다.
+    """
+    models_dir = 'models'
+    latest_version = -1
+    latest_model_path = None
+
+    if os.path.exists(models_dir):
+        for filename in os.listdir(models_dir):
+            if filename.startswith('model_v') and filename.endswith('.pth'):
+                try:
+                    version = int(filename.split('v')[1].split('.pth')[0])
+                    if version > latest_version:
+                        latest_version = version
+                        latest_model_path = os.path.join(models_dir, filename)
+                except (IndexError, ValueError):
+                    continue
+
+    if latest_model_path:
+        print(f"Loading latest model: {latest_model_path}")
+        Game.logger.info(f"Loading latest model: {latest_model_path}")
+        model.load_state_dict(torch.load(latest_model_path))
+        return model, latest_version
+    else:
+        print("No saved models found. Starting from scratch.")
+        Game.logger.info("No saved models found. Starting from scratch.")
+        return model, 0
+
 
 def get_game_logger(game_name):
     logger = logging.getLogger(game_name)

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gomoku AI</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <h1>Gomoku AI Challenge</h1>
+    <div id="game-info">
+      <p id="status">Choose your color to start!</p>
+      <div id="new-game-controls">
+        <button id="play-black-btn">Play as Black</button>
+        <button id="play-white-btn">Play as White</button>
+      </div>
+    </div>
+    <div id="board"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>

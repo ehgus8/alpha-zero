@@ -45,7 +45,8 @@ class MCTS:
                 else:
                     policy_logits, value = model(torch.from_numpy(canonical_board).unsqueeze(0))
                         
-                    policy_logits = policy_logits.squeeze(0).numpy()
+                    value = value.detach()
+                    policy_logits = policy_logits.squeeze(0).detach().numpy()
                     policy_softmax = np.exp(policy_logits) / np.sum(np.exp(policy_logits))
                     # caching
                     MCTS.cache[board_key] = (policy_softmax, value)

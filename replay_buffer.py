@@ -65,3 +65,38 @@ class ReplayBuffer:
             print(f"Replay Buffer loaded from {filename} successfully.")
         except:
             print("Failed to load Replay Buffer.")
+
+    def load_latest_buffer(self):
+        """
+        'replay_buffers' 디렉토리에서 가장 최신 버전의 버퍼를 불러옵니다.
+        파일이 없으면 아무것도 하지 않습니다.
+        """
+        buffers_dir = os.path.join(os.path.dirname(__file__), 'replay_buffers')
+        latest_version = -1
+        latest_iter = -1
+        latest_buffer_path = None
+        if os.path.exists(buffers_dir):
+            for filename in os.listdir(buffers_dir):
+                if filename.startswith('replay_buffer_v') and filename.endswith('.pkl'):
+                    try:
+                        # 예: replay_buffer_v43_i_26.pkl
+                        parts = filename.split('_')
+                        v_idx = int(parts[2][1:])  # v43
+                        i_idx = int(parts[4].split('.')[0])  # i_26
+                        # 버전이 더 높거나, 버전이 같으면 iteration이 더 높은 것
+                        if (v_idx > latest_version) or (v_idx == latest_version and i_idx > latest_iter):
+                            latest_version = v_idx
+                            latest_iter = i_idx
+                            latest_buffer_path = os.path.join(buffers_dir, filename)
+                    except (IndexError, ValueError):
+                        continue
+        if latest_buffer_path:
+            try:
+                with open(latest_buffer_path, 'rb') as f:
+                    loaded_buffer = pickle.load(f)
+                self.buffer = deque(loaded_buffer, maxlen=self.buffer_size)
+                print(f"Replay Buffer loaded from {latest_buffer_path} successfully.")
+            except Exception as e:
+                print(f"Failed to load Replay Buffer: {e}")
+        else:
+            print("No saved replay buffer found. Starting with empty buffer.")

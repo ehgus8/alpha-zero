@@ -16,7 +16,7 @@ MODEL_CFG = config['model']
 BUFFER_CFG = config['buffer']
 
 
-def start_train_loop(Game, older_model, newer_model, model_version,
+def start_train_loop(Game, older_model, newer_model, model_version, older_model_args,
                      buffer, buffer_size, collect_data_iterations, batch_size, mcts_iter, display=False):
     """
     AlphaZero 스타일의 self-play 및 학습 루프를 실행합니다.
@@ -50,7 +50,9 @@ def start_train_loop(Game, older_model, newer_model, model_version,
         print('update_count:', update_count)
         Game.logger.info(f'iteration: {i}, update_count: {update_count}')
 
-        train.collect_data(Game, older_model, buffer, iterations=collect_data_iterations, mcts_iter=mcts_iter, display=display)
+        train.collect_data(Game, older_model, older_model_args, buffer, 
+                           iterations=collect_data_iterations, mcts_iter=mcts_iter, 
+                           num_workers=TRAIN_CFG['num_workers'], display=display)
         Game.logger.info(f'buffer status: {buffer.size()}/{buffer_size}')
         print(f'buffer status:{buffer.size()}/{buffer_size}')
         train_iterations = (buffer.size() // batch_size) * 1
@@ -66,14 +68,22 @@ def start_train_loop(Game, older_model, newer_model, model_version,
         Game.logger.debug(f'loss: {loss}\n\t policy_loss:{policy_loss} value_loss: {value_loss}\n\t l2_loss: {l2_reg}')
 
         newer_model.to('cpu')
-        newer_model_win_rate = test.compare(Game,older_model, newer_model, mcts_iter, mcts_iter, iterations=70, sampling=False, early_stopping=True)
+        # newer_model_win_rate = test.compare(Game,older_model, newer_model, mcts_iter, mcts_iter, iterations=30, sampling=False, early_stopping=True)
+        newer_model_win_rate = 0.6
         Game.logger.info(f'newer_model_win_rate: {newer_model_win_rate}')
         if newer_model_win_rate > 0.55:
             print('cache size:',len(mcts.MCTS.cache))
-            print('cache match rate:', mcts.MCTS.matched/(mcts.MCTS.mcts_count))
             Game.logger.info(f'cache size: {len(mcts.MCTS.cache)}')
-            Game.logger.info(f'cache match rate: {mcts.MCTS.matched/(mcts.MCTS.mcts_count)}')
-            Game.logger.debug(f'cache matched: {mcts.MCTS.matched} / {mcts.MCTS.mcts_count}')
+
+            if mcts.MCTS.mcts_count > 0:
+                cache_rate = mcts.MCTS.matched / mcts.MCTS.mcts_count
+                print(f'cache match rate: {cache_rate}')
+                Game.logger.info(f'cache match rate: {cache_rate}')
+                Game.logger.debug(f'cache matched: {mcts.MCTS.matched} / {mcts.MCTS.mcts_count}')
+            else:
+                print('cache match rate: N/A (MCTS not run in main process)')
+                Game.logger.info('cache match rate: N/A (MCTS not run in main process)')
+
             mcts.MCTS.cache.clear()
             mcts.MCTS.matched = 0
             mcts.MCTS.mcts_count = 0
@@ -93,33 +103,55 @@ def start_train_loop(Game, older_model, newer_model, model_version,
         Game.logger.info(f'replay buffer size: {buffer.size()}')
         print('replay buffer size:', buffer.size())
 
-def train_mode(Game):
+def train_mode(Game, load_model=False):
     """
     지정된 게임 환경에서 모델을 초기화하고, 학습 루프를 시작합니다.
 
     Args:
         Game: 게임 클래스 (예: Gomoku, TicTacToe 등)
+        load_model (bool): 최신 모델을 불러올지 여부. 기본값은 False.
     Returns:
         없음. (학습 및 모델 저장)
     """
     buffer_size = TRAIN_CFG['buffer_size']
     buffer = ReplayBuffer(buffer_size)
-    buffer.load_pickle('replay_buffer_v13_i_5')
+    # buffer.load_pickle('replay_buffer_v13_i_5')
     num_transformer_layers = TRAIN_CFG['num_transformer_layers']
     new_num_transformer_layers = TRAIN_CFG['new_num_transformer_layers']
     num_heads = TRAIN_CFG['num_heads']
     patch_size = TRAIN_CFG['patch_size']
     embed_dim = TRAIN_CFG['embed_dim']
     dropout = TRAIN_CFG['dropout']
+
+    # 모델 초기화 및 최신 버전 불러오기
     older_model = Net(Game.rows, patch_size=patch_size, embed_dim=embed_dim, action_dim=Game.action_dim,num_heads=num_heads, depth=num_transformer_layers, channels=Game.feature_dim, dropout=dropout)
+    
+    model_version = 0
+    if load_model:
+        older_model, model_version = utils.load_latest_model(older_model, Game)
+        buffer.load_latest_buffer()
+    
+    older_model_args = {
+        'img_size': Game.rows, 
+        'patch_size': patch_size, 
+        'embed_dim': embed_dim, 
+        'action_dim': Game.action_dim,
+        'num_heads': num_heads, 
+        'depth': num_transformer_layers, 
+        'channels': Game.feature_dim, 
+        'dropout': dropout
+    }
+
     newer_model = Net(Game.rows, patch_size=patch_size, embed_dim=embed_dim, action_dim=Game.action_dim,num_heads=num_heads, depth=new_num_transformer_layers, channels=Game.feature_dim, dropout=dropout)
     newer_model.load_state_dict(older_model.state_dict())
+
     for name, param in newer_model.named_parameters():
         Game.logger.info(f"{name}: {param.numel()} parameters")
         print(f"{name}: {param.numel()} parameters")
+
     print(f'buffer status:{buffer.size()}/{buffer_size}')
     Game.logger.info(f'buffer status: {buffer.size()}/{buffer_size}')
-    start_train_loop(Game, older_model, newer_model, 0,
+    start_train_loop(Game, older_model, newer_model, model_version, older_model_args,
                         buffer, buffer_size,
                         collect_data_iterations=TRAIN_CFG['collect_data_iterations'], batch_size=TRAIN_CFG['batch_size'], mcts_iter=TRAIN_CFG['mcts_iter'], 
                         display=True) 

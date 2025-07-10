@@ -42,7 +42,13 @@ if __name__ == "__main__":
             continue
         if mode == 1:
             Game = select_game()
-            train_mode(Game)
+            
+            load_choice = ''
+            while load_choice.lower() not in ['y', 'n']:
+                load_choice = input("최신 모델을 불러와서 학습을 계속하시겠습니까? (y/n): ")
+            
+            load_model = True if load_choice.lower() == 'y' else False
+            train_mode(Game, load_model)
         elif mode == 2:
             test_mode()
         elif mode == 3:
