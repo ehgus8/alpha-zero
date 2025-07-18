@@ -8,7 +8,7 @@ import utils
 
 
 class Gomoku(Game):
-    rows, cols = 7, 7
+    rows, cols = 13, 13
     action_dim = rows * cols
     state_dim = rows * cols
 

@@ -7,7 +7,7 @@ import utils
 
 
 class Gomoku(Game):
-    rows, cols = 7, 7
+    rows, cols = 13, 13
     action_dim = rows * cols
     state_dim = rows * cols
     feature_dim = 2
@@ -93,19 +93,19 @@ class Gomoku(Game):
     
     @staticmethod
     def get_valid_moves(board):
-        # valid_moves = set()
-        # for r in range(Gomoku.rows):
-        #     for c in range(Gomoku.cols):
-        #         if board[0, r, c] == 1 or board[1, r, c] == 1:
-        #             for dr, dc in [(0, 1), (1, 0), (1, 1), (1, -1)]:
-        #                 if 0 <= r + dr < Gomoku.rows and 0 <= c + dc < Gomoku.cols and board[0, r + dr, c + dc] == 0 and board[1, r + dr, c + dc] == 0:
-        #                     valid_moves.add((r + dr, c + dc))
-        #                 if 0 <= r - dr < Gomoku.rows and 0 <= c - dc < Gomoku.cols and board[0, r - dr, c - dc] == 0 and board[1, r - dr, c - dc] == 0:
-        #                     valid_moves.add((r - dr, c - dc))
-        # if len(valid_moves) == 0:
-        #     valid_moves.add((Gomoku.rows//2, Gomoku.cols//2))
-        # return list(valid_moves)
-        return [(r, c) for r in range(Gomoku.rows) for c in range(Gomoku.cols) if board[0, r, c] == 0 and board[1, r, c] == 0]
+        valid_moves = set()
+        for r in range(Gomoku.rows):
+            for c in range(Gomoku.cols):
+                if board[0, r, c] == 1 or board[1, r, c] == 1:
+                    for dr, dc in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                        if 0 <= r + dr < Gomoku.rows and 0 <= c + dc < Gomoku.cols and board[0, r + dr, c + dc] == 0 and board[1, r + dr, c + dc] == 0:
+                            valid_moves.add((r + dr, c + dc))
+                        if 0 <= r - dr < Gomoku.rows and 0 <= c - dc < Gomoku.cols and board[0, r - dr, c - dc] == 0 and board[1, r - dr, c - dc] == 0:
+                            valid_moves.add((r - dr, c - dc))
+        if len(valid_moves) == 0:
+            valid_moves.add((Gomoku.rows//2, Gomoku.cols//2))
+        return list(valid_moves)
+        # return [(r, c) for r in range(Gomoku.rows) for c in range(Gomoku.cols) if board[0, r, c] == 0 and board[1, r, c] == 0]
 
     @staticmethod
     def mcts(model, board: np.array, root, mcts_iterations, dirichlet = True):

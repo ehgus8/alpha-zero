@@ -93,7 +93,7 @@ def start_train_loop(Game, older_model, newer_model, model_version, older_model_
             update_count+=1
             Game.logger.info(f'update older_model from newer_model, now model_v{update_count}')
             utils.save_model(newer_model, update_count)
-            if update_count % 15 == 0:
+            if update_count % 100 == 0:
                 print(f'vanila mcts (iter: {min(mcts_iter*update_count, 400)}) vs newer model result:')
                 test.compare(Game, None, newer_model, min(mcts_iter*update_count, 400), mcts_iter, iterations=2, sampling=False, early_stopping=False)
             model_reject_count = 0
